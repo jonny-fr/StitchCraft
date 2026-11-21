@@ -1,0 +1,25 @@
+# docker compose -f compose.yaml -f compose.dev.yaml up
+# api with --reload on mounted sources, web as Vite dev server with HMR on :5173
+services:
+  api:
+    command: ["uvicorn", "stitchcraft_api.app:app", "--host", "0.0.0.0", "--port", "8000", "--reload",
+              "--reload-dir", "/app/packages", "--reload-dir", "/app/services", "--reload-dir", "/app/data"]
+    volumes:
+      - ./packages/core/src:/app/packages/core/src
+      - ./services/api/src:/app/services/api/src
+      - ./data:/app/data
+      - cache:/cache
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+      target: build
+    command: ["pnpm", "vite", "--host", "0.0.0.0", "--port", "5173"]
+    environment:
+      STITCHCRAFT_API: http://api:8000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./web/src:/src/web/src
+      - ./tests/reference:/src/tests/reference
