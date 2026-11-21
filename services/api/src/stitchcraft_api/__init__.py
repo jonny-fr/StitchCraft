@@ -1,0 +1,1 @@
+"""Stitchcraft HTTP API."""

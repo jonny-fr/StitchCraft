@@ -31,7 +31,7 @@ def validate(text: str, dialect: str = "de") -> ValidationResult:
     graph = build_graph(parsed.pattern)
     diags = sorted(
         parsed.diagnostics + graph.diagnostics,
-        key=lambda d: d.span.start if d.span else -1,
+        key=lambda d: (d.span is None, d.span.start if d.span else 0),
     )
     rows = [
         {
