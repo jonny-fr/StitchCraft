@@ -2,6 +2,10 @@
 # (width = one sc wide, height = one sc row tall). Versioned: part of the preview cache key.
 version = 1
 
+[yarn]
+# in-fabric radius / nominal radius: the yarn is squashed against its neighbours
+compression = 0.6
+
 [gauge_defaults]
 # derived from hook size when no gauge is measured
 width_per_hook_mm = 1.45

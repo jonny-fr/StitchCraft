@@ -37,7 +37,8 @@ class Params:
 
     @property
     def yarn_radius_mm(self) -> float:
-        return self.yarn_mm / 2.0
+        """Radius of the yarn as it lies in the fabric (squashed against its neighbours)."""
+        return self.yarn_mm / 2.0 * library()["yarn"]["compression"]
 
     def stitch_size(self, stitch_type: str) -> tuple[float, float]:
         """(width, height) in mm of one stitch of the given canonical type."""

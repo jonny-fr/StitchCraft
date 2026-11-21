@@ -1,0 +1,146 @@
+# Yarn templates v1: control points of the yarn centre line for one stitch.
+# Each point is [u, v, n, anchor]:
+#   u  along the working direction, in stitch widths (-0.5 = junction with the previous stitch)
+#   v  from the parent's top (0) to this stitch's top (1), in stitch heights
+#   n  towards the worker, in compressed yarn radii
+#   anchor 0 = this stitch's base, 1 / 2 = top of the first / second parent (decreases)
+# First and last points are the junctions shared with the neighbouring stitches.
+version = 1
+
+# Single crochet (layered). n is in compressed yarn radii; the parent's top loops lie at
+# n = +-1.2, so strands passing them go to +-3.2 and the hole lies 0.45 heights below.
+# Path: back strand behind the parent's back loop, through the hole to the front, front leg
+# up, front loop across the top, front leg down, back through the hole, yarn over up the
+# back to the back loop. Strands sharing a layer keep >= 2 radii apart.
+[sc.both]
+points = [
+  [ -0.50,   1.00,   0.0, 0],
+  [ -0.40,   0.75,  -1.4, 0],
+  [ -0.37,   0.25,  -2.6, 0],
+  [ -0.13,  -0.10,  -3.2, 0],
+  [ -0.13,  -0.45,  -1.2, 0],
+  [ -0.13,  -0.50,   0.0, 0],
+  [ -0.13,  -0.45,   1.2, 0],
+  [ -0.13,  -0.10,   3.2, 0],
+  [ -0.37,   0.35,   2.2, 0],
+  [ -0.36,   0.82,   1.2, 0],
+  [  0.02,   1.00,   1.2, 0],
+  [  0.36,   0.82,   1.2, 0],
+  [  0.37,   0.35,   2.2, 0],
+  [  0.13,  -0.10,   3.2, 0],
+  [  0.13,  -0.45,   1.2, 0],
+  [  0.13,  -0.50,   0.0, 0],
+  [  0.13,  -0.45,  -1.2, 0],
+  [  0.13,  -0.10,  -3.2, 0],
+  [  0.37,   0.25,  -2.6, 0],
+  [  0.40,   0.75,  -1.4, 0],
+  [  0.40,   0.98,  -1.2, 0],
+  [  0.50,   1.00,   0.0, 0],
+]
+
+# Back loop only: through between the parent's loops; its front loop stays free.
+[sc.blo]
+points = [
+  [ -0.50,   1.00,   0.0, 0],
+  [ -0.40,   0.75,  -1.4, 0],
+  [ -0.37,   0.25,  -2.6, 0],
+  [ -0.13,   0.10,  -3.2, 0],
+  [ -0.13,  -0.05,  -2.4, 0],
+  [ -0.13,  -0.25,   0.0, 0],
+  [ -0.13,  -0.40,   1.6, 0],
+  [ -0.13,  -0.10,   3.2, 0],
+  [ -0.37,   0.35,   2.2, 0],
+  [ -0.36,   0.82,   1.2, 0],
+  [  0.02,   1.00,   1.2, 0],
+  [  0.36,   0.82,   1.2, 0],
+  [  0.37,   0.35,   2.2, 0],
+  [  0.13,  -0.10,   3.2, 0],
+  [  0.13,  -0.40,   1.6, 0],
+  [  0.13,  -0.25,   0.0, 0],
+  [  0.13,  -0.05,  -2.4, 0],
+  [  0.13,   0.10,  -3.2, 0],
+  [  0.37,   0.25,  -2.6, 0],
+  [  0.40,   0.75,  -1.4, 0],
+  [  0.40,   0.98,  -1.2, 0],
+  [  0.50,   1.00,   0.0, 0],
+]
+
+# Front loop only: through between the parent's loops; its back loop stays free.
+[sc.flo]
+points = [
+  [ -0.50,   1.00,   0.0, 0],
+  [ -0.40,   0.75,  -1.4, 0],
+  [ -0.37,   0.25,  -2.6, 0],
+  [ -0.13,  -0.10,  -3.2, 0],
+  [ -0.13,  -0.40,  -1.6, 0],
+  [ -0.13,  -0.25,   0.0, 0],
+  [ -0.13,  -0.05,   2.4, 0],
+  [ -0.13,   0.10,   3.2, 0],
+  [ -0.37,   0.35,   2.2, 0],
+  [ -0.36,   0.82,   1.2, 0],
+  [  0.02,   1.00,   1.2, 0],
+  [  0.36,   0.82,   1.2, 0],
+  [  0.37,   0.35,   2.2, 0],
+  [  0.13,   0.10,   3.2, 0],
+  [  0.13,  -0.05,   2.4, 0],
+  [  0.13,  -0.25,   0.0, 0],
+  [  0.13,  -0.40,  -1.6, 0],
+  [  0.13,  -0.10,  -3.2, 0],
+  [  0.37,   0.25,  -2.6, 0],
+  [  0.40,   0.75,  -1.4, 0],
+  [  0.40,   0.98,  -1.2, 0],
+  [  0.50,   1.00,   0.0, 0],
+]
+
+# sc2tog: the first pass goes through the first parent, the second through the second.
+[dec.both]
+points = [
+  [ -0.50,   1.00,   0.0, 0],
+  [ -0.40,   0.75,  -1.4, 0],
+  [ -0.37,   0.25,  -2.6, 0],
+  [ -0.13,  -0.10,  -3.2, 1],
+  [ -0.13,  -0.45,  -1.2, 1],
+  [ -0.13,  -0.50,   0.0, 1],
+  [ -0.13,  -0.45,   1.2, 1],
+  [ -0.13,  -0.10,   3.2, 1],
+  [ -0.37,   0.35,   2.2, 0],
+  [ -0.36,   0.82,   1.2, 0],
+  [  0.02,   1.00,   1.2, 0],
+  [  0.36,   0.82,   1.2, 0],
+  [  0.37,   0.35,   2.2, 0],
+  [  0.13,  -0.10,   3.2, 2],
+  [  0.13,  -0.45,   1.2, 2],
+  [  0.13,  -0.50,   0.0, 2],
+  [  0.13,  -0.45,  -1.2, 2],
+  [  0.13,  -0.10,  -3.2, 2],
+  [  0.37,   0.25,  -2.6, 0],
+  [  0.40,   0.75,  -1.4, 0],
+  [  0.40,   0.98,  -1.2, 0],
+  [  0.50,   1.00,   0.0, 0],
+]
+
+# Chain (layered): an oval loop lying along the chain, top strand in front, bottom strand
+# behind, closed by the strand drawn through it. v runs across the chain (0 bottom, 1 top).
+[ch.both]
+points = [
+  [ -0.50,   0.50,   0.0, 0],
+  [ -0.30,   0.88,   1.2, 0],
+  [  0.10,   0.95,   1.2, 0],
+  [  0.45,   0.65,   0.0, 0],
+  [  0.30,   0.12,  -1.2, 0],
+  [ -0.10,   0.05,  -1.2, 0],
+  [ -0.35,   0.40,  -0.2, 0],
+  [  0.10,   0.50,   0.2, 0],
+  [  0.50,   0.50,   0.0, 0],
+]
+
+# Slip stitch: hook through the parent, pull one loop through everything.
+[slst.both]
+points = [
+  [-0.50,  1.00,  0.0, 0],
+  [-0.25,  0.40, -0.8, 0],
+  [-0.05, -0.25,  0.0, 0],
+  [ 0.10,  0.40,  0.9, 0],
+  [ 0.30,  1.00,  0.5, 0],
+  [ 0.50,  1.00,  0.0, 0],
+]
