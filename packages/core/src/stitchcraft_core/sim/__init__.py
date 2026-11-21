@@ -65,7 +65,7 @@ def relax(g: StitchGraph, params: Params, max_steps: int = 300) -> Shape:
     groups, edges = _distance_groups(g, widths, heights, faces, ideal)
     bend = _bending_group(faces, topo, x)
     groups.append(bend)
-    edges |= {(int(min(k, l)), int(max(k, l))) for k, l in bend.quads[:, 2:]}
+    edges |= {(int(min(a, b)), int(max(a, b))) for a, b in bend.quads[:, 2:]}
 
     sim_mask = np.array([not node.turning for node in g.nodes])
     w_unit = params.stitch_width_mm
@@ -169,10 +169,7 @@ def _orient(g: StitchGraph, topo: Topology, x: np.ndarray) -> np.ndarray:
         return faces
     fn = np.cross(x[faces[:, 1]] - x[faces[:, 0]], x[faces[:, 2]] - x[faces[:, 0]])
     first = topo.face_row == topo.face_row.min()
-    if g.rows[0].kind == "round":
-        want = -1.0
-    else:
-        want = 1.0
+    want = -1.0 if g.rows[0].kind == "round" else 1.0
     if np.sign(fn[first, 2].sum()) != want:
         faces = faces[:, [0, 2, 1]]
     topo.faces = faces
