@@ -1,0 +1,5 @@
+Colors: MC = cream, CC = navy
+Rnd 1: 6 sc in MR (6)
+Rnd 2: inc x6 (12)
+Rnd 3 (CC): (sc, inc) x6 (18)
+Rnd 4: 9 sc, change to MC, 9 sc (18)

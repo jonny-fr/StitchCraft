@@ -1,0 +1,3 @@
+Row 1: ch 16, turn
+Row 2: 15 dc, ch 1, turn (15)
+Row 3: 5 ss, 10 htr, ch 1, turn (15)

@@ -1,0 +1,20 @@
+{
+  "dialect": "en-UK",
+  "ok": true,
+  "stitches": 24,
+  "rows": [
+    [
+      1,
+      "row",
+      12,
+      null
+    ],
+    [
+      2,
+      "row",
+      12,
+      12
+    ]
+  ],
+  "diagnostics": []
+}

@@ -1,0 +1,3 @@
+Row 1: ch 12, turn
+Row 2: ch 3, 12 tr, turn (12)
+Row 3: ch 3, tr2tog, 8 tr, tr2tog, turn (10)

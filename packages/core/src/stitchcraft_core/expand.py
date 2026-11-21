@@ -19,7 +19,7 @@ from stitchcraft_core.ir import (
     Turn,
 )
 
-MAX_TURNING_CHAIN = 3
+MAX_TURNING_CHAIN = 4  # tr (UK dtr) rows start with 4 chains
 MAX_STITCHES = 5_000  # preview costs ~7 ms per stitch, so this caps a request at ~35 s
 
 

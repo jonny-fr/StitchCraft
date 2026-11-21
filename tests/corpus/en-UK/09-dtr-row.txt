@@ -1,0 +1,2 @@
+Row 1: ch 12, turn
+Row 2: ch 4, 12 dtr, turn (12)

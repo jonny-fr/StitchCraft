@@ -1,6 +1,7 @@
 from conftest import reference_pattern
 from stitchcraft_core.graph import build_graph
 from stitchcraft_core.notation import parse
+from stitchcraft_core.validate import validate
 
 
 def graph(text: str, dialect: str = "de"):
@@ -130,3 +131,8 @@ def test_huge_pattern_is_rejected_before_expanding():
 def test_huge_each_row_is_rejected():
     g = graph("Rd. 1: (100 fM) x 50\n" + "\n".join("10 fM in jede M" for _ in range(3)))
     assert "E_TOO_LARGE" in [d.code for d in g.diagnostics]
+
+
+def test_four_chains_before_treble_rows_are_a_turning_chain():
+    res = validate("R 1: 12 Lm, wenden\nR 2: 4 Lm, 12 DStb, wenden (12)", dialect="de")
+    assert res.ok, res.diagnostics

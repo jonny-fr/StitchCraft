@@ -1,0 +1,10 @@
+Rnd 1: 6 dc in MR (6)
+Rnd 2: inc x6 (12)
+Rnd 3: (dc, inc) x6 (18)
+Rnd 4: (2 dc, inc) x6 (24)
+Rnds 5-8: dc around (24)
+Rnd 9: (2 dc, dc2tog) x6 (18)
+Rnd 10: (dc, dc2tog) x6 (12)
+Stuff
+Rnd 11: dc2tog x6 (6)
+Fasten off

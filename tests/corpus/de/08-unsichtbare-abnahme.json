@@ -1,0 +1,32 @@
+{
+  "dialect": "de",
+  "ok": true,
+  "stitches": 36,
+  "rows": [
+    [
+      1,
+      "round",
+      6,
+      6
+    ],
+    [
+      2,
+      "round",
+      12,
+      12
+    ],
+    [
+      3,
+      "round",
+      12,
+      12
+    ],
+    [
+      4,
+      "round",
+      6,
+      6
+    ]
+  ],
+  "diagnostics": []
+}

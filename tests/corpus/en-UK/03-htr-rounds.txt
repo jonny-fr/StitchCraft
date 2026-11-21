@@ -1,0 +1,3 @@
+Rnd 1: 8 htr in MR (8)
+Rnd 2: 2 htr in each st (16)
+Rnd 3: (htr, 2 htr in next st) x8 (24)

@@ -1,0 +1,2 @@
+Rnd 1: 12 dc in MR (12)
+Rnd 2: 2 dc in each st (24)

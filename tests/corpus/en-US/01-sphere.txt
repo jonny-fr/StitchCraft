@@ -1,0 +1,10 @@
+Rnd 1: 6 sc in MR (6)
+Rnd 2: inc x6 (12)
+Rnd 3: (sc, inc) x6 (18)
+Rnd 4: (2 sc, inc) x6 (24)
+Rnds 5-8: sc around (24)
+Rnd 9: (2 sc, sc2tog) x6 (18)
+Rnd 10: (sc, sc2tog) x6 (12)
+Stuff
+Rnd 11: sc2tog x6 (6)
+Fasten off

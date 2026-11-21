@@ -1,0 +1,81 @@
+{
+  "dialect": "en-US",
+  "ok": true,
+  "stitches": 162,
+  "rows": [
+    [
+      1,
+      "round",
+      6,
+      6
+    ],
+    [
+      2,
+      "round",
+      12,
+      12
+    ],
+    [
+      3,
+      "round",
+      18,
+      18
+    ],
+    [
+      4,
+      "round",
+      18,
+      18
+    ],
+    [
+      5,
+      "round",
+      18,
+      18
+    ],
+    [
+      6,
+      "round",
+      18,
+      18
+    ],
+    [
+      7,
+      "round",
+      18,
+      18
+    ],
+    [
+      8,
+      "round",
+      18,
+      18
+    ],
+    [
+      9,
+      "round",
+      18,
+      18
+    ],
+    [
+      10,
+      "round",
+      18,
+      18
+    ]
+  ],
+  "diagnostics": [
+    {
+      "code": "W_AMBIGUOUS_DIALECT",
+      "severity": "warning",
+      "line": null,
+      "params": {
+        "chosen": "en-US",
+        "candidates": [
+          "en-US",
+          "en-UK"
+        ]
+      }
+    }
+  ]
+}

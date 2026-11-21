@@ -1,0 +1,3 @@
+Rnd 1: 6 sc in MR (6)
+Rnd 2: inc x6 (12)
+Rnd 3: invdec x6 (6)

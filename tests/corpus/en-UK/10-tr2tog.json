@@ -1,0 +1,39 @@
+{
+  "dialect": "en-US",
+  "ok": true,
+  "stitches": 34,
+  "rows": [
+    [
+      1,
+      "row",
+      12,
+      null
+    ],
+    [
+      2,
+      "row",
+      12,
+      12
+    ],
+    [
+      3,
+      "row",
+      10,
+      10
+    ]
+  ],
+  "diagnostics": [
+    {
+      "code": "W_AMBIGUOUS_DIALECT",
+      "severity": "warning",
+      "line": null,
+      "params": {
+        "chosen": "en-US",
+        "candidates": [
+          "en-US",
+          "en-UK"
+        ]
+      }
+    }
+  ]
+}

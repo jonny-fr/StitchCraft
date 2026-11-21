@@ -1,0 +1,2 @@
+Row 1: ch 14, turn
+Row 2: ch 3, sk 1, ((tr, ch 1, tr) in next st, sk 1) x6, tr, turn (19)

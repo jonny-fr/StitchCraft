@@ -1,0 +1,4 @@
+Row 1: ch 12, turn
+Row 2: ch 3, 12 dc, turn (12)
+Row 3: ch 3, dc2tog, 8 dc, dc2tog, turn (10)
+Row 4: ch 3, dc3tog, 4 dc, dc3tog, turn (6)

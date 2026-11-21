@@ -1,0 +1,4 @@
+Rnd 1: 8 hdc in MR (8)
+Rnd 2: 2 hdc in each st (16)
+Rnd 3: (hdc, 2 hdc in next st) x8 (24)
+Rnds 4-6: hdc around (24)

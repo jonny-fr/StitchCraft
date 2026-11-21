@@ -1,0 +1,26 @@
+{
+  "dialect": "en-US",
+  "ok": true,
+  "stitches": 24,
+  "rows": [
+    [
+      1,
+      "round",
+      6,
+      6
+    ],
+    [
+      2,
+      "round",
+      12,
+      12
+    ],
+    [
+      3,
+      "round",
+      6,
+      6
+    ]
+  ],
+  "diagnostics": []
+}

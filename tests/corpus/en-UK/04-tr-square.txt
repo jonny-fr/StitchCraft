@@ -1,0 +1,2 @@
+Row 1: ch 15, turn
+Rows 2-8: ch 3, 15 tr, turn (15)

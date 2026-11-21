@@ -1,0 +1,9 @@
+Abkürzungen:
+fe = feste Masche
+Zu = 2 fM in 1 M
+Ab = Abnahme
+
+Rd. 1: 6 fe in MR (6)
+Rd. 2: 6 Zu (12)
+Rd. 3: (1 fe, Zu) x6 (18)
+Rd. 4: (1 fe, Ab) x6 (12)

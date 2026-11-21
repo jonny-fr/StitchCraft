@@ -1,0 +1,6 @@
+Runde 1: 6 fM in den Fadenring (6)
+Runde 2: 6x zun (12)
+Runde 3: (1 fM, zun) x6 (18)
+Runde 4: (2 fM, zun) x6 (24)
+Runde 5: (3 fM, zun) x6 (30)
+Runde 6: (4 fM, zun) x6 (36)

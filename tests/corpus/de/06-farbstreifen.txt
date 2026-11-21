@@ -1,0 +1,7 @@
+Farben: A = creme, B = rot
+Rd. 1: 6 fM in MR (6)
+Rd. 2: 6x zun (12)
+Rd. 3 (B): (1 fM, zun) x6 (18)
+Rd. 4: 9 fM, FbW A, 9 fM (18)
+FbW B
+Rd. 5: 18 fM (18)

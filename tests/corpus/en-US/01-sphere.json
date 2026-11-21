@@ -1,0 +1,87 @@
+{
+  "dialect": "en-US",
+  "ok": true,
+  "stitches": 192,
+  "rows": [
+    [
+      1,
+      "round",
+      6,
+      6
+    ],
+    [
+      2,
+      "round",
+      12,
+      12
+    ],
+    [
+      3,
+      "round",
+      18,
+      18
+    ],
+    [
+      4,
+      "round",
+      24,
+      24
+    ],
+    [
+      5,
+      "round",
+      24,
+      24
+    ],
+    [
+      6,
+      "round",
+      24,
+      24
+    ],
+    [
+      7,
+      "round",
+      24,
+      24
+    ],
+    [
+      8,
+      "round",
+      24,
+      24
+    ],
+    [
+      9,
+      "round",
+      18,
+      18
+    ],
+    [
+      10,
+      "round",
+      12,
+      12
+    ],
+    [
+      11,
+      "round",
+      6,
+      6
+    ]
+  ],
+  "diagnostics": [
+    {
+      "code": "I_IGNORED",
+      "severity": "info",
+      "line": 8,
+      "params": {}
+    },
+    {
+      "code": "I_IGNORED",
+      "severity": "info",
+      "line": 10,
+      "params": {}
+    }
+  ]
+}

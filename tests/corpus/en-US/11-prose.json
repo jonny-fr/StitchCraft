@@ -1,0 +1,27 @@
+{
+  "dialect": "en-US",
+  "ok": true,
+  "stitches": 18,
+  "rows": [
+    [
+      1,
+      "round",
+      6,
+      6
+    ],
+    [
+      2,
+      "round",
+      12,
+      12
+    ]
+  ],
+  "diagnostics": [
+    {
+      "code": "W_PROSE",
+      "severity": "warning",
+      "line": 3,
+      "params": {}
+    }
+  ]
+}

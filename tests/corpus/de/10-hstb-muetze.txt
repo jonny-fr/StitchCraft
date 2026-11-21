@@ -1,0 +1,4 @@
+Rd. 1: 8 hStb in MR (8)
+Rd. 2: (2 hStb in 1 M) x8 (16)
+Rd. 3: (1 hStb, 2 hStb in 1 M) x8 (24)
+Rd. 4-6: 24 hStb (24)

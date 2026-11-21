@@ -1,0 +1,31 @@
+{
+  "dialect": "de",
+  "ok": false,
+  "stitches": 20,
+  "rows": [
+    [
+      1,
+      "round",
+      6,
+      6
+    ],
+    [
+      2,
+      "round",
+      14,
+      14
+    ]
+  ],
+  "diagnostics": [
+    {
+      "code": "E_TOO_FEW_PARENTS",
+      "severity": "error",
+      "line": 2,
+      "params": {
+        "row": 2,
+        "needed": 14,
+        "available": 6
+      }
+    }
+  ]
+}

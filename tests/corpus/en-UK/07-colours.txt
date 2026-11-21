@@ -1,0 +1,4 @@
+Colours: A = cream, B = navy
+Rnd 1: 6 dc in MR (6)
+Rnd 2 (B): inc x6 (12)
+Rnd 3: (dc, inc) x6 (18)

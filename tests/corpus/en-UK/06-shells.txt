@@ -1,0 +1,2 @@
+Row 1: ch 20, turn
+Row 2: dc, (sk 2, 5 tr in next st, sk 2, dc) x3, ch 1, turn (19)

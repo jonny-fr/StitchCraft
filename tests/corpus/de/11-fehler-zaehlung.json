@@ -1,0 +1,37 @@
+{
+  "dialect": "de",
+  "ok": false,
+  "stitches": 36,
+  "rows": [
+    [
+      1,
+      "round",
+      6,
+      6
+    ],
+    [
+      2,
+      "round",
+      12,
+      12
+    ],
+    [
+      3,
+      "round",
+      18,
+      17
+    ]
+  ],
+  "diagnostics": [
+    {
+      "code": "E_COUNT_MISMATCH",
+      "severity": "error",
+      "line": 3,
+      "params": {
+        "row": 3,
+        "expected": 17,
+        "actual": 18
+      }
+    }
+  ]
+}

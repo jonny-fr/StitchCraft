@@ -1,0 +1,5 @@
+Rnd 1: 6 dc in MR (6)
+Rnd 2: inc x6 (12)
+Rnd 3: (dc, inc) x6 (18)
+Rnd 4 (BLO): 18 dc (18)
+Rnds 5-10: 18 dc (18)

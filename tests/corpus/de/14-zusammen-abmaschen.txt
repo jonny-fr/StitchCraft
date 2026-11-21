@@ -1,0 +1,4 @@
+R 1: 13 Lm, wenden
+R 2: 12 fM, 1 Lm, wenden (12)
+R 3: 3 fM zus. abm., 6 fM, 3 fM zus. abm., 1 Lm, wenden (8)
+R 4: 2 fM zus. abm., 4 fM, 2 fM zus. abm., 1 Lm, wenden (6)

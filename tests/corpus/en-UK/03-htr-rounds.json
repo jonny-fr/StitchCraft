@@ -1,0 +1,26 @@
+{
+  "dialect": "en-UK",
+  "ok": true,
+  "stitches": 48,
+  "rows": [
+    [
+      1,
+      "round",
+      8,
+      8
+    ],
+    [
+      2,
+      "round",
+      16,
+      16
+    ],
+    [
+      3,
+      "round",
+      24,
+      24
+    ]
+  ],
+  "diagnostics": []
+}

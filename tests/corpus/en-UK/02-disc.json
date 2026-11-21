@@ -1,0 +1,33 @@
+{
+  "dialect": "en-UK",
+  "ok": true,
+  "stitches": 36,
+  "rows": [
+    [
+      1,
+      "round",
+      6,
+      6
+    ],
+    [
+      2,
+      "round",
+      12,
+      12
+    ],
+    [
+      3,
+      "round",
+      18,
+      18
+    ]
+  ],
+  "diagnostics": [
+    {
+      "code": "W_PROSE",
+      "severity": "warning",
+      "line": 1,
+      "params": {}
+    }
+  ]
+}

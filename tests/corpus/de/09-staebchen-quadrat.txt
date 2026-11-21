@@ -1,0 +1,2 @@
+R 1: 15 Lm, wenden
+R 2-8: 3 Lm, 15 Stb, wenden (15)
