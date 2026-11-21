@@ -35,7 +35,8 @@
     "selected": "Masche {{id}} ({{type}}), Reihe {{row}}",
     "editorTab": "Anleitung",
     "viewerTab": "3D",
-    "error": "Fehler: {{message}}"
+    "error": "Fehler: {{message}}",
+    "invalidParams": "Bitte gültige Werte für Garn, Nadel und Maschenprobe eingeben."
   },
   "diagnostics": {
     "E_SYNTAX": "Zeile {{line}}: unverständliche Anweisung.",
@@ -44,6 +45,7 @@
     "E_COUNT_MISMATCH": "Runde/Reihe {{row}}: {{actual}} Maschen gezählt, angegeben sind {{expected}}.",
     "E_TOO_FEW_PARENTS": "Runde/Reihe {{row}}: braucht {{needed}} Maschen der Vorreihe, vorhanden sind {{available}}.",
     "W_UNWORKED": "Runde/Reihe {{row}}: {{left}} Maschen der Vorreihe bleiben unbehäkelt.",
-    "E_EMPTY_PATTERN": "Die Anleitung enthält keine Maschen."
+    "E_EMPTY_PATTERN": "Die Anleitung enthält keine Maschen.",
+    "E_TOO_LARGE": "Die Anleitung ist zu groß für die Vorschau (höchstens {{limit}} Maschen)."
   }
 }

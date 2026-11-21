@@ -21,6 +21,38 @@ uv run uvicorn stitchcraft_api.app:app --reload
 cd web && pnpm install && pnpm dev        # http://localhost:5173
 ```
 
+### Schnelltest
+
+`docker compose up --build`, http://localhost:8080 öffnen, unter „Beispiel“ `3-sphere` wählen
+und „3D-Vorschau“ klicken. Im 3D-Tab lassen sich Maschen anklicken (springt zur Stelle in
+der Anleitung), Reihen ausblenden und die Garnfarbe ändern.
+
+## Notation
+
+Eine Zeile je Runde/Reihe, Beispiele im Dialekt `de` (en-US/en-UK analog, siehe
+`data/dialects/`):
+
+```
+Rd. 1: 6 fM in MR (6)          Label: Rd./Runde/R/Reihe, auch „R1:“ und „1. Rd:“
+Rd. 2: 6x zun (12)             Wiederholung vorne …
+Rd. 3: (1 fM, zun) x6 (18)     … oder hinten, (n) am Ende ist die Kontrollzahl
+Rd. 4: 2 fM in jede M (36)     n Maschen in jede Masche, „fM rundum“
+Rd. 5-8: 36 fM (36)            Bereich
+Rd. 9 (nur hMg): 36 fM (36)    nur hinteres/vorderes Maschenglied
+R 1: 16 Lm, wenden             Reihen mit Wendeluftmaschen
+Füllen                         Hinweise werden übernommen, Freitext wird gemeldet
+```
+
+„R“ ist mehrdeutig (Runde oder Reihe): Beginnt das Stück im Magic Ring, gilt es als Runde.
+
+## Bekannte Grenzen (M1)
+
+- Höchstens 5 000 Maschen pro Vorschau (≈ 7 ms pro Masche), sonst `E_TOO_LARGE`.
+- Garn durchdringt sich bei Zu-/Abnahmen noch stellenweise (Kriterium A5, siehe Protokoll).
+- Ein Teil und eine Garnfarbe pro Anleitung.
+- Der Fortschritts-Endpoint `/previews/{id}/events` meldet bisher nur „fertig“; die Vorschau
+  wird synchron berechnet.
+
 ## Kommandozeile
 
 ```sh

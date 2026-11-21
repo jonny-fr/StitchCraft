@@ -145,3 +145,38 @@ def test_spans_point_at_source_text():
 def test_unknown_dialect_raises():
     with pytest.raises(ValueError):
         parse("6 fM in MR", dialect="fr")
+
+
+@pytest.mark.parametrize("label", ["R1:", "Rd1:", "Rd.1:", "1. Rd:", "1. Runde:", "1.Rd.:"])
+def test_label_spellings_without_space_or_with_leading_number(label):
+    (row,) = rows(f"{label} 6 fM in MR (6)")
+    assert (row.number, row.kind, row.expected_count) == (1, "round", 6)
+
+
+def test_short_r_label_follows_magic_ring_as_round():
+    parsed = rows("R1: 6 fM in MR (6)\nR2: 6x zun (12)\nR3-4: 12 fM (12)")
+    assert [r.kind for r in parsed] == ["round"] * 4
+
+
+def test_short_r_label_without_ring_is_a_flat_row():
+    parsed = rows("R1: 16 Lm, wenden\nR2: 15 fM, 1 Lm, wenden (15)")
+    assert [r.kind for r in parsed] == ["row", "row"]
+
+
+def test_counted_stitches_into_each_stitch():
+    (_, row) = rows("Rd. 1: 6 fM in MR (6)\nRd. 2: 2 fM in jede M (12)")
+    (each,) = row.instructions
+    assert isinstance(each, Each)
+    assert (each.type, each.count) == ("sc", 2)
+
+
+def test_en_counted_stitches_into_each_stitch():
+    (_, row) = rows("Rnd 1: 6 sc in MR (6)\nRnd 2: 2 sc in each st (12)", dialect="en-US")
+    (each,) = row.instructions
+    assert isinstance(each, Each) and each.count == 2
+
+
+def test_huge_label_range_is_rejected_without_copying_rows():
+    result = parse("Rd. 1-1000000: 6 fM")
+    assert [d.code for d in result.diagnostics] == ["E_TOO_LARGE"]
+    assert result.pattern.parts[0].rows == []

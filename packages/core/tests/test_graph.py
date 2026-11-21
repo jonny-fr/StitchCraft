@@ -110,3 +110,23 @@ def test_back_loop_is_recorded_on_nodes():
 def test_sphere_has_expected_size():
     g = graph(reference_pattern("3-sphere"))
     assert sum(n.counting for n in g.nodes) == 432
+
+
+def test_counted_each_puts_that_many_stitches_into_every_parent():
+    g = graph("6 fM in MR (6)\n2 fM in jede M (12)")
+    row = g.rows[1]
+    assert len(counting(g, row)) == 12
+    assert [
+        len([n for n in row.node_ids if g.nodes[n].parents == [p]]) for p in g.rows[0].node_ids
+    ] == [2] * 6
+
+
+def test_huge_pattern_is_rejected_before_expanding():
+    g = graph("Rd. 1: (10000 fM) x 10000")
+    assert [d.code for d in g.diagnostics] == ["E_TOO_LARGE"]
+    assert g.nodes == []
+
+
+def test_huge_each_row_is_rejected():
+    g = graph("Rd. 1: (100 fM) x 50\n" + "\n".join("10 fM in jede M" for _ in range(3)))
+    assert "E_TOO_LARGE" in [d.code for d in g.diagnostics]

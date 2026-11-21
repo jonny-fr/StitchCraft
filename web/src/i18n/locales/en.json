@@ -35,7 +35,8 @@
     "selected": "Stitch {{id}} ({{type}}), row {{row}}",
     "editorTab": "Pattern",
     "viewerTab": "3D",
-    "error": "Error: {{message}}"
+    "error": "Error: {{message}}",
+    "invalidParams": "Please enter valid values for yarn, hook and gauge."
   },
   "diagnostics": {
     "E_SYNTAX": "Line {{line}}: instruction not understood.",
@@ -44,6 +45,7 @@
     "E_COUNT_MISMATCH": "Round/row {{row}}: counted {{actual}} stitches, pattern says {{expected}}.",
     "E_TOO_FEW_PARENTS": "Round/row {{row}}: needs {{needed}} stitches of the previous row, only {{available}} there.",
     "W_UNWORKED": "Round/row {{row}}: {{left}} stitches of the previous row stay unworked.",
-    "E_EMPTY_PATTERN": "The pattern contains no stitches."
+    "E_EMPTY_PATTERN": "The pattern contains no stitches.",
+    "E_TOO_LARGE": "The pattern is too large to preview (at most {{limit}} stitches)."
   }
 }

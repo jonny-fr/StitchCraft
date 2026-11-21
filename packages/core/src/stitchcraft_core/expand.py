@@ -17,6 +17,7 @@ from stitchcraft_core.ir import (
 )
 
 MAX_TURNING_CHAIN = 3
+MAX_STITCHES = 5_000  # preview costs ~7 ms per stitch, so this caps a request at ~35 s
 
 
 @dataclass
@@ -35,6 +36,7 @@ class Op:
 @dataclass
 class EachOp:
     type: str
+    count: int = 1
     loop: Loop = Loop.BOTH
     span: SourceSpan | None = None
 
@@ -63,13 +65,39 @@ def _ops(instr: Instruction) -> list[RowOp]:
             ]
         case Macro(kind="dec", count=n, loop=loop, stitch=t, span=span):
             return [Op(t, 2, macro="dec", loop=loop, span=span) for _ in range(n)]
-        case Each(type=t, loop=loop, span=span):
-            return [EachOp(t, loop, span)]
+        case Each(type=t, count=n, loop=loop, span=span):
+            return [EachOp(t, n, loop, span)]
         case Turn(span=span):
             return [TurnOp(span)]
         case Repeat(body=body, times=times):
             return [op for _ in range(times) for i in body for op in _ops(i)]
     raise TypeError(f"unknown instruction {instr!r}")
+
+
+def size(instrs: list[Instruction], parents: int) -> int:
+    """Upper bound of the ops a row expands to, computed without expanding it."""
+    total = 0
+    for instr in instrs:
+        match instr:
+            case Stitch(count=n) | Macro(kind="dec", count=n):
+                total += n
+            case Macro(count=n):
+                total += 2 * n
+            case Each(count=n):
+                total += n * parents
+            case Repeat(body=body, times=times):
+                total += times * size(body, parents)
+    return total
+
+
+def pattern_size(rows: list[Row]) -> int:
+    total = prev = 0
+    for row in rows:
+        prev = size(row.instructions, prev)
+        total += prev
+        if total > MAX_STITCHES:
+            break
+    return total
 
 
 def expand_row(row: Row) -> list[RowOp]:

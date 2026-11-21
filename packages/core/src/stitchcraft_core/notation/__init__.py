@@ -15,6 +15,7 @@ from functools import cache
 from lark import Lark, Token, Transformer, v_args
 from lark.exceptions import LarkError
 
+from stitchcraft_core.expand import MAX_STITCHES
 from stitchcraft_core.ir import (
     Diagnostic,
     Each,
@@ -35,6 +36,7 @@ GRAMMAR = r"""
 start: label? body count? "."?
 
 label: LABEL range lmod? ":"
+     | INT "." LABEL lmod? ":"
 lmod: "(" LOOPMOD ")"
 range: INT ("-" INT)?
 
@@ -46,7 +48,7 @@ element: LOOPMOD? item times?       -> element
 ?item: stitch | macro | each | turn | group
 stitch: INT? STITCH INT? LOOPMOD? RING?
 macro: INT? MACRO LOOPMOD?
-each: STITCH EACH | EACH INT? STITCH
+each: INT? STITCH EACH | EACH INT? STITCH
 turn: TURN
 group: "(" body ")" | "[" body "]" | "*" body "*"
 times: X INT | INT X
@@ -69,7 +71,7 @@ class ParseResult:
 def _parser(dialect_id: str) -> Lark:
     d = load_dialect(dialect_id)
     terminals = "\n".join(
-        f"{name}: /{word_regex(d.words[name])}/i"
+        f"{name}: /{word_regex(d.words[name], digit_follows=name == 'LABEL')}/i"
         for name in ("STITCH", "MACRO", "LOOPMOD", "RING", "TURN", "EACH", "LABEL")
     )
     return Lark(
@@ -132,9 +134,13 @@ class _ToIR(Transformer):
         return label, body, count
 
     def label(self, meta, children):
-        tok = children[0]
-        first, last = children[1]
-        loop = children[2] if len(children) > 2 else None
+        # "Rd. 1-3 (nur hMg):" or "1. Rd:"
+        tok = next(c for c in children if isinstance(c, Token) and c.type == "LABEL")
+        num = next((c for c in children if isinstance(c, Token) and c.type == "INT"), None)
+        first, last = (
+            (int(num), int(num)) if num else next(c for c in children if isinstance(c, tuple))
+        )
+        loop = next((c for c in children if isinstance(c, Loop)), None)
         return _Label(self.d.lookup[normalise(tok)][1], first, last, loop)
 
     def lmod(self, meta, children):
@@ -204,8 +210,12 @@ class _ToIR(Transformer):
         return m
 
     def each(self, meta, children):
-        _, toks = self._split(children)
-        return Each(type=self.d.canonical(toks["STITCH"]), span=self._span(meta))
+        ints, toks = self._split(children)
+        return Each(
+            type=self.d.canonical(toks["STITCH"]),
+            count=int(ints[0]) if ints else 1,
+            span=self._span(meta),
+        )
 
     def turn(self, meta, children):
         return Turn(span=self._span(meta))
@@ -231,7 +241,14 @@ def _apply_loop(instr: Instruction, loop: Loop) -> None:
 def parse(text: str, dialect: str = "de") -> ParseResult:
     d = load_dialect(dialect)
     parser = _parser(dialect)
-    label_re = re.compile(r"^\s*" + word_regex(d.words["LABEL"]) + r"\s*\d", re.IGNORECASE)
+    label_re = re.compile(
+        r"^\s*(?:"
+        + word_regex(d.words["LABEL"], digit_follows=True)
+        + r"\s*\d|\d+\.\s*"
+        + word_regex(d.words["LABEL"])
+        + ")",
+        re.IGNORECASE,
+    )
     ignored_re = re.compile(r"^\s*" + word_regex(d.words["IGNORED"]), re.IGNORECASE)
 
     part = Part()
@@ -264,12 +281,17 @@ def parse(text: str, dialect: str = "de") -> ParseResult:
         into_ring = any(isinstance(i, Stitch) and i.into_ring for i in _walk(body))
         if label is not None:
             kind, first, last = label.kind, label.first, label.last
+            if kind == "short":
+                kind = last_kind or ("round" if into_ring else "row")
             if label.loop is not None:
                 for instr in body:
                     _apply_loop(instr, label.loop)
         else:
             kind = last_kind or ("round" if into_ring else "row")
             first = last = last_number + 1
+        if last - first >= MAX_STITCHES:
+            diags.append(Diagnostic("E_TOO_LARGE", "error", line_span, {"limit": MAX_STITCHES}))
+            continue
         if any(isinstance(i, Stitch) and i.type == "ring" for i in body):
             body = [i for i in body if not (isinstance(i, Stitch) and i.type == "ring")]
             for i in _walk(body):

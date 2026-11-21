@@ -53,9 +53,10 @@ class Macro:
 
 @dataclass
 class Each:
-    """One stitch into every remaining stitch of the previous row ("sc around")."""
+    """``count`` stitches into every remaining stitch of the previous row ("sc around")."""
 
     type: str
+    count: int = 1
     loop: Loop = Loop.BOTH
     span: SourceSpan | None = None
 

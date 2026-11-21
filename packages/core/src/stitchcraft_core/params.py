@@ -46,7 +46,9 @@ class Params:
         return entry["width"] * self.stitch_width_mm, entry["height"] * self.row_height_mm
 
     def cache_key(self) -> str:
-        blob = json.dumps({"params": asdict(self), "library": library()["version"]}, sort_keys=True)
+        """Everything that changes the geometry; colour is applied by the viewer."""
+        geometry = {k: v for k, v in asdict(self).items() if k != "color"}
+        blob = json.dumps({"params": geometry, "library": library()["version"]}, sort_keys=True)
         return hashlib.sha256(blob.encode()).hexdigest()
 
 

@@ -19,3 +19,10 @@ def test_preview_writes_outputs(tmp_path):
     out = tmp_path / "out"
     assert main(["preview", str(f), "--out", str(out)]) == 0
     assert {p.name for p in out.iterdir()} == {"yarn.bin", "model.glb", "shape.json"}
+
+
+def test_preview_without_stitches_exits_with_diagnostics(tmp_path, capsys):
+    f = tmp_path / "p.txt"
+    f.write_text("nur Prosa\n", encoding="utf-8")
+    assert main(["preview", str(f), "--out", str(tmp_path / "out")]) == 1
+    assert json.loads(capsys.readouterr().err)["diagnostics"][0]["code"] == "W_PROSE"

@@ -15,15 +15,18 @@ def normalise(word: str) -> str:
     return re.sub(r"\s+", "", word).casefold()
 
 
-def word_regex(words: list[str]) -> str:
-    """Case-insensitive alternation, longest first, with word boundaries at word chars."""
+def word_regex(words: list[str], digit_follows: bool = False) -> str:
+    """Case-insensitive alternation, longest first, with word boundaries at word chars.
+
+    ``digit_follows`` lets a digit touch the word ("R1", "Rd1")."""
+    end = r"(?![^\W\d])" if digit_follows else r"(?!\w)"
     parts = []
     for w in sorted(set(words), key=len, reverse=True):
         p = r"\s*".join(re.escape(tok) for tok in w.split())
         if w[0].isalnum():
             p = r"(?<!\w)" + p
         if w[-1].isalnum():
-            p = p + r"(?!\w)"
+            p = p + end
         parts.append(p)
     return "(?:" + "|".join(parts) + ")"
 
@@ -65,8 +68,10 @@ def load_dialect(dialect_id: str) -> Dialect:
     words["IGNORED"] = kw["ignored"]
     for v in kw["round_label"]:
         lookup[normalise(v)] = ("label", "round")
-    for v in kw["row_label"] + kw["row_label_short"]:
+    for v in kw["row_label"]:
         lookup[normalise(v)] = ("label", "row")
+    for v in kw["row_label_short"]:
+        lookup[normalise(v)] = ("label", "short")  # round or row, decided from context
     meta = raw["meta"]
     return Dialect(
         id=meta["id"],

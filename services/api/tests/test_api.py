@@ -66,3 +66,16 @@ def test_preview_without_stitches_is_422(client):
 
 def test_unknown_preview_is_404(client):
     assert client.get("/api/v1/previews/deadbeef/yarn.bin").status_code == 404
+
+
+def test_too_large_preview_is_422_with_diagnostic(client):
+    r = client.post("/api/v1/previews", json={"text": "Rd. 1: (1000 fM) x 1000", "dialect": "de"})
+    assert r.status_code == 422
+    assert r.json()["detail"]["diagnostics"][0]["code"] == "E_TOO_LARGE"
+
+
+def test_colour_change_reuses_cached_preview(client):
+    body = {"text": "6 fM in MR (6)\n6x zun (12)", "dialect": "de"}
+    first = client.post("/api/v1/previews", json={**body, "params": {"color": "#ff0000"}}).json()
+    again = client.post("/api/v1/previews", json={**body, "params": {"color": "#00ff00"}}).json()
+    assert again["id"] == first["id"] and again["cached"] is True

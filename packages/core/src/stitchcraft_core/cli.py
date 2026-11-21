@@ -41,10 +41,16 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if result.ok else 1
     if args.cmd == "preview":
         from stitchcraft_core.export import encode_yarn_bin, glb_bytes, shape_json
-        from stitchcraft_core.pipeline import preview
+        from stitchcraft_core.pipeline import PreviewError, preview
+        from stitchcraft_core.serialize import validation_dict
 
         params = Params(fill=args.fill, hook_mm=args.hook_mm, yarn_mm=args.yarn_mm)
-        made = preview(args.file.read_text(encoding="utf-8"), args.dialect, params)
+        try:
+            made = preview(args.file.read_text(encoding="utf-8"), args.dialect, params)
+        except PreviewError as exc:
+            json.dump(validation_dict(exc.validation), sys.stderr, ensure_ascii=False, indent=2)
+            sys.stderr.write("\n")
+            return 1
         args.out.mkdir(parents=True, exist_ok=True)
         (args.out / "yarn.bin").write_bytes(encode_yarn_bin(made.yarn))
         (args.out / "model.glb").write_bytes(glb_bytes(made.yarn))

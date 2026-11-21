@@ -68,7 +68,7 @@ def cache_key(text: str, dialect: str, params: Params) -> str:
     return hashlib.sha256(blob.encode()).hexdigest()[:32]
 
 
-def preview(text: str, dialect: str, params: Params) -> Preview:
+def preview(text: str, dialect: str, params: Params, key: str | None = None) -> Preview:
     timings = {}
     t0 = time.perf_counter()
     validation = validate(text, dialect=dialect)
@@ -96,5 +96,4 @@ def preview(text: str, dialect: str, params: Params) -> Preview:
         "closed": shape.closed,
         "timings": {k: round(v, 1) for k, v in timings.items()},
     }
-    key = cache_key(text, dialect, params)
-    return Preview(key, validation, shape, yarn, stats)
+    return Preview(key or cache_key(text, dialect, params), validation, shape, yarn, stats)

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from stitchcraft_core.expand import EachOp, Op, TurnOp, expand_row
+from stitchcraft_core.expand import MAX_STITCHES, EachOp, Op, TurnOp, expand_row, pattern_size
 from stitchcraft_core.ir import Diagnostic, Pattern, SourceSpan
 
 
@@ -106,6 +106,9 @@ def build_graph(pattern: Pattern) -> StitchGraph:
 
     if part is None or not part.rows:
         return StitchGraph([], [], None, [Diagnostic("E_EMPTY_PATTERN", "error")])
+    if pattern_size(part.rows) > MAX_STITCHES:
+        too_large = Diagnostic("E_TOO_LARGE", "error", params={"limit": MAX_STITCHES})
+        return StitchGraph([], [], None, [too_large])
 
     if any(isinstance(op, Op) and op.ring for op in expand_row(part.rows[0])):
         nodes.append(Node(0, -1, "ring", counting=False))
@@ -147,9 +150,11 @@ def build_graph(pattern: Pattern) -> StitchGraph:
             if isinstance(op, TurnOp):
                 continue
             if isinstance(op, EachOp):
+                macro = "inc" if op.count > 1 else None
                 while ptr < len(available):
                     last_parent = available[ptr]
-                    add(op.type, [last_parent], op)
+                    for _ in range(op.count):
+                        add(op.type, [last_parent], op, macro=macro)
                     ptr += 1
                 continue
             if op.ring:

@@ -65,7 +65,7 @@ def create_app(cache_dir: Path | None = None) -> FastAPI:
         if meta.exists():
             return {**json.loads(meta.read_text()), "cached": True}
         try:
-            result = await run_in_threadpool(preview, body.text, body.dialect, params)
+            result = await run_in_threadpool(preview, body.text, body.dialect, params, key)
         except PreviewError as exc:
             detail = {"diagnostics": validation_dict(exc.validation)["diagnostics"]}
             raise HTTPException(422, detail) from exc

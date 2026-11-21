@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { defaultParams, requestPreview, validate, type Diagnostic, type Params, type PreviewResult, type Validation } from "./api";
+import { ApiError, defaultParams, paramsValid, requestPreview, validate, type Diagnostic, type Params, type PreviewResult, type Validation } from "./api";
 import { samples } from "./samples";
 import { Viewer, type View, type ViewerHandle } from "./viewer/Viewer";
 
@@ -31,7 +31,10 @@ export default function App() {
   const { t, i18n } = useTranslation();
   const [text, setText] = useState(() => load("stitchcraft.text", samples.find((s) => s.id === "3-sphere")?.text ?? ""));
   const [dialect, setDialect] = useState(() => load("stitchcraft.dialect", "de"));
-  const [params, setParams] = useState<Params>(() => ({ ...defaultParams, ...load("stitchcraft.params", {}) }));
+  const [params, setParams] = useState<Params>(() => {
+    const stored = { ...defaultParams, ...load("stitchcraft.params", {}) };
+    return paramsValid(stored) ? stored : defaultParams;
+  });
   const [validation, setValidation] = useState<Validation | null>(null);
   const [result, setResult] = useState<PreviewResult | null>(null);
   const [busy, setBusy] = useState(false);
@@ -50,6 +53,7 @@ export default function App() {
   useEffect(() => save("stitchcraft.text", text), [text]);
   useEffect(() => save("stitchcraft.dialect", dialect), [dialect]);
   useEffect(() => save("stitchcraft.params", params), [params]);
+  useEffect(() => () => void (overlay && URL.revokeObjectURL(overlay)), [overlay]);
 
   // live lint, debounced
   useEffect(() => {
@@ -60,6 +64,7 @@ export default function App() {
     return () => (clearTimeout(id), ctrl.abort());
   }, [text, dialect]);
 
+  const message = (d: Diagnostic) => t(`diagnostics.${d.code}`, { ...d.params, line: d.span?.line });
   const runPreview = useCallback(async () => {
     setBusy(true);
     setError(null);
@@ -70,16 +75,17 @@ export default function App() {
       setMaxRow(Math.max(...r.shape.rows.map((row) => row.number)));
       setTab("viewer");
     } catch (e) {
-      setError((e as Error).message);
+      const diags = e instanceof ApiError ? e.diagnostics : [];
+      setError(diags.length ? diags.map(message).join(" ") : (e as Error).message);
     } finally {
       setBusy(false);
     }
-  }, [text, dialect, params]);
+  }, [text, dialect, params, t]);
 
   const stitchById = useMemo(() => new Map(result?.shape.stitches.map((s) => [s.id, s]) ?? []), [result]);
   const rowOf = useMemo(() => new Map(result?.shape.stitches.map((s) => [s.id, s.row]) ?? []), [result]);
   const rowNumbers = result?.shape.rows.map((r) => r.number) ?? [];
-  const rounds = (validation?.rows[0]?.kind ?? "round") === "round";
+  const rounds = (result?.shape.rows[0]?.kind ?? "round") === "round";
 
   // 3D -> editor: select the stitch's token
   const selectStitch = (id: number) => {
@@ -97,10 +103,10 @@ export default function App() {
     if (hit) setSelected(hit.id);
   };
 
-  const message = (d: Diagnostic) => t(`diagnostics.${d.code}`, { ...d.params, line: d.span?.line });
   const param = <K extends keyof Params>(key: K, value: Params[K]) => setParams((p) => ({ ...p, [key]: value }));
   const num = (v: string) => (v === "" ? null : Number(v));
 
+  const paramsOk = paramsValid(params);
   const sel = selected !== null ? stitchById.get(selected) : undefined;
   const stats = result?.shape.stats;
 
@@ -148,7 +154,8 @@ export default function App() {
           onChange={(e) => setText(e.target.value)}
           onSelect={onCaret}
         />
-        <button className="primary" disabled={busy} onClick={runPreview}>{busy ? t("app.computing") : t("app.preview")}</button>
+        <button className="primary" disabled={busy || !paramsOk} onClick={runPreview}>{busy ? t("app.computing") : t("app.preview")}</button>
+        {!paramsOk && <p className="error">{t("app.invalidParams")}</p>}
         {error && <p className="error">{t("app.error", { message: error })}</p>}
 
         <ul className="diagnostics">
@@ -182,10 +189,10 @@ export default function App() {
 
         <fieldset>
           <legend>{t("app.material")}</legend>
-          <label>{t("app.yarnMm")}<input type="number" step="0.1" min="0.5" value={params.yarn_mm} onChange={(e) => param("yarn_mm", Number(e.target.value))} /></label>
-          <label>{t("app.hookMm")}<input type="number" step="0.25" min="1" value={params.hook_mm} onChange={(e) => param("hook_mm", Number(e.target.value))} /></label>
-          <label>{t("app.gaugeStitches")}<input type="number" step="1" value={params.gauge_stitches ?? ""} onChange={(e) => param("gauge_stitches", num(e.target.value))} /></label>
-          <label>{t("app.gaugeRows")}<input type="number" step="1" value={params.gauge_rows ?? ""} onChange={(e) => param("gauge_rows", num(e.target.value))} /></label>
+          <label>{t("app.yarnMm")}<input type="number" step="0.1" min="0.4" max="14.9" value={params.yarn_mm} onChange={(e) => param("yarn_mm", Number(e.target.value))} /></label>
+          <label>{t("app.hookMm")}<input type="number" step="0.25" min="0.75" max="24.75" value={params.hook_mm} onChange={(e) => param("hook_mm", Number(e.target.value))} /></label>
+          <label>{t("app.gaugeStitches")}<input type="number" step="1" min="2" max="99" value={params.gauge_stitches ?? ""} onChange={(e) => param("gauge_stitches", num(e.target.value))} /></label>
+          <label>{t("app.gaugeRows")}<input type="number" step="1" min="2" max="99" value={params.gauge_rows ?? ""} onChange={(e) => param("gauge_rows", num(e.target.value))} /></label>
           <label>{t("app.fill")} {params.fill.toFixed(1)}<input type="range" min="0" max="1" step="0.1" value={params.fill} onChange={(e) => param("fill", Number(e.target.value))} /></label>
           <label>{t("app.color")}<input type="color" value={params.color} onChange={(e) => param("color", e.target.value)} /></label>
           <label>
