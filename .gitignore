@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+node_modules/
+web/dist/
+.cache/
+*.egg-info/
+.DS_Store
+.idea/workspace.xml

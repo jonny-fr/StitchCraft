@@ -1,0 +1,48 @@
+[project]
+name = "stitchcraft"
+version = "0.1.0"
+description = "Crochet patterns in, realistic 3D previews out"
+requires-python = ">=3.14,<3.15"
+dependencies = ["stitchcraft-core", "stitchcraft-api"]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["packages/core", "services/api"]
+
+[tool.uv.sources]
+stitchcraft-core = { workspace = true }
+stitchcraft-api = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "hypothesis>=6.100",
+    "httpx>=0.27",
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "pre-commit>=4.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["packages/core/tests", "services/api/tests"]
+markers = [
+    "reference: compares against photographed reference pieces in tests/reference (skipped when data is missing)",
+    "slow: longer simulation runs",
+]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "NPY"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = false
+warn_unused_ignores = true
+ignore_missing_imports = true
+files = ["packages/core/src", "services/api/src"]

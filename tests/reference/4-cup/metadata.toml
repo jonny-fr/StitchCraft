@@ -1,0 +1,10 @@
+piece = "4-cup"
+dialect = "de"
+form = "open"
+yarn = "Baumwolle, DK"
+yarn_mm = 2.0
+hook_mm = 3.5
+# Measured gauge of the real piece (stitches x rows per 10 cm, single crochet).
+# Fill in once the swatch is measured; until then defaults derived from hook size apply.
+# gauge_stitches = 20
+# gauge_rows = 22

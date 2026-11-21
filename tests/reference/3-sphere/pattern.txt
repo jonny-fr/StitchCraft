@@ -1,0 +1,14 @@
+Rd. 1: 6 fM in MR (6)
+Rd. 2: 6x zun (12)
+Rd. 3: (1 fM, zun) x6 (18)
+Rd. 4: (1 fM, zun, 1 fM) x6 (24)
+Rd. 5: (3 fM, zun) x6 (30)
+Rd. 6: (2 fM, zun, 2 fM) x6 (36)
+Rd. 7-12: 36 fM (36)
+Rd. 13: (2 fM, abn, 2 fM) x6 (30)
+Rd. 14: (3 fM, abn) x6 (24)
+Rd. 15: (1 fM, abn, 1 fM) x6 (18)
+Füllen
+Rd. 16: (1 fM, abn) x6 (12)
+Rd. 17: 6x abn (6)
+Faden abschneiden

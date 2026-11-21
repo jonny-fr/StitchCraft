@@ -1,0 +1,30 @@
+[meta]
+id = "de"
+name = "Deutsch"
+# turning chain counts as a stitch? (sc rows: no)
+turning_chain_counts = false
+
+[stitches]
+ch = ["Lm", "Luftmasche", "Luftmaschen"]
+slst = ["Km", "Kettmasche", "Kettmaschen"]
+sc = ["fM", "f M", "feste Masche", "feste Maschen"]
+hdc = ["hStb", "halbes Stäbchen", "halbe Stäbchen"]
+dc = ["Stb", "Stäbchen"]
+tr = ["DStb", "Doppelstäbchen"]
+
+[macros]
+inc = ["zun", "Zunahme", "Zunahmen", "verd"]
+dec = ["abn", "Abnahme", "Abnahmen"]
+
+[loops]
+blo = ["nur hMg", "nur in das hintere Maschenglied", "nur in die hinteren Maschenglieder", "hMg"]
+flo = ["nur vMg", "nur in das vordere Maschenglied", "nur in die vorderen Maschenglieder", "vMg"]
+
+[keywords]
+ring = ["in den MR", "in einen MR", "in MR", "in den Fadenring", "in einen Fadenring", "in Fadenring", "MR", "Fadenring"]
+turn = ["wenden"]
+each = ["rundum", "in jede M", "in jede Masche"]
+round_label = ["Runde", "Rd.", "Rd", "Rnd."]
+row_label = ["Reihe", "R."]
+row_label_short = ["R"]
+ignored = ["Füllen", "Ausstopfen", "Faden abschneiden", "Faden vernähen", "Fertigstellen", "Beenden"]

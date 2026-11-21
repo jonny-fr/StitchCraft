@@ -1,0 +1,106 @@
+"""IR rows -> flat operation sequences (repeats and macros resolved)."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from stitchcraft_core.ir import (
+    Each,
+    Instruction,
+    Loop,
+    Macro,
+    Repeat,
+    Row,
+    SourceSpan,
+    Stitch,
+    Turn,
+)
+
+MAX_TURNING_CHAIN = 3
+
+
+@dataclass
+class Op:
+    type: str
+    consume: int = 1  # how many new parent stitches this op works into
+    share: bool = False  # works into the same stitch as the previous op
+    ring: bool = False
+    counting: bool = True
+    turning: bool = False
+    macro: str | None = None
+    loop: Loop = Loop.BOTH
+    span: SourceSpan | None = None
+
+
+@dataclass
+class EachOp:
+    type: str
+    loop: Loop = Loop.BOTH
+    span: SourceSpan | None = None
+
+
+@dataclass
+class TurnOp:
+    span: SourceSpan | None = None
+
+
+RowOp = Op | EachOp | TurnOp
+
+
+def _ops(instr: Instruction) -> list[RowOp]:
+    match instr:
+        case Stitch(type=t, count=n, loop=loop, into_ring=ring, span=span):
+            consume = 0 if (ring or t == "ch") else 1
+            return [Op(t, consume, ring=ring, loop=loop, span=span) for _ in range(n)]
+        case Macro(kind="inc", count=n, loop=loop, stitch=t, span=span):
+            return [
+                op
+                for _ in range(n)
+                for op in (
+                    Op(t, 1, macro="inc", loop=loop, span=span),
+                    Op(t, 0, share=True, macro="inc", loop=loop, span=span),
+                )
+            ]
+        case Macro(kind="dec", count=n, loop=loop, stitch=t, span=span):
+            return [Op(t, 2, macro="dec", loop=loop, span=span) for _ in range(n)]
+        case Each(type=t, loop=loop, span=span):
+            return [EachOp(t, loop, span)]
+        case Turn(span=span):
+            return [TurnOp(span)]
+        case Repeat(body=body, times=times):
+            return [op for _ in range(times) for i in body for op in _ops(i)]
+    raise TypeError(f"unknown instruction {instr!r}")
+
+
+def expand_row(row: Row) -> list[RowOp]:
+    ops = [op for instr in row.instructions for op in _ops(instr)]
+    _mark_turning_chains(ops)
+    return ops
+
+
+def _mark_turning_chains(ops: list[RowOp]) -> None:
+    """Short chain runs at the row start or right before a turn are turning chains."""
+    is_ch = [isinstance(o, Op) and o.type == "ch" for o in ops]
+    stitches = [c for c, o in zip(is_ch, ops, strict=True) if not isinstance(o, TurnOp)]
+    if all(stitches) or not any(stitches):
+        return
+    runs: list[tuple[int, int]] = []
+    i = 0
+    while i < len(ops):
+        if is_ch[i]:
+            j = i
+            while j < len(ops) and is_ch[j]:
+                j += 1
+            runs.append((i, j))
+            i = j
+        else:
+            i += 1
+    for start, end in runs:
+        at_start = start == 0
+        before_turn = end == len(ops) or isinstance(ops[end], TurnOp)
+        if (at_start or before_turn) and end - start <= MAX_TURNING_CHAIN:
+            for k in range(start, end):
+                op = ops[k]
+                assert isinstance(op, Op)
+                op.counting = False
+                op.turning = True

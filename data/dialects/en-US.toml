@@ -1,0 +1,29 @@
+[meta]
+id = "en-US"
+name = "English (US terms)"
+turning_chain_counts = false
+
+[stitches]
+ch = ["ch", "chain", "chains"]
+slst = ["sl st", "slst", "slip stitch", "ss"]
+sc = ["sc", "single crochet"]
+hdc = ["hdc", "half double crochet"]
+dc = ["dc", "double crochet"]
+tr = ["tr", "treble crochet", "treble"]
+
+[macros]
+inc = ["inc", "increase"]
+dec = ["sc2tog", "dec", "decrease"]
+
+[loops]
+blo = ["BLO", "in back loops only", "in back loop only", "back loop only"]
+flo = ["FLO", "in front loops only", "in front loop only", "front loop only"]
+
+[keywords]
+ring = ["in a magic ring", "in magic ring", "in MR", "in the magic ring", "magic ring", "MR"]
+turn = ["turn"]
+each = ["around", "in each st", "in each stitch", "in each st around"]
+round_label = ["Round", "Rnd", "Rnd.", "Rd"]
+row_label = ["Row"]
+row_label_short = ["R"]
+ignored = ["Stuff", "Fasten off", "Finish off", "Weave in ends"]
