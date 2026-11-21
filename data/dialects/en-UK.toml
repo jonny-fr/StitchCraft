@@ -43,3 +43,13 @@ priority = 1
 markers = ["htr", "dtr", "ss", "half treble", "double treble", "UK terms", "UK terminology", "(UK)"]
 language_markers = ["ch", "dc", "tr", "inc", "dec", "Rnd", "Round", "Row", "turn", "st", "sts",
   "magic ring", "around", "stitch", "chain"]
+
+[print]
+round = "Rnd"
+row = "Row"
+ring = "in MR"
+each = "in each st"
+same = "in next st"
+skip = "sk"
+color_change = "change to"
+palette = "Colours"

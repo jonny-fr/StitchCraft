@@ -44,3 +44,18 @@ priority = 0
 markers = ["fM", "Lm", "Km", "hStb", "Stb", "DStb", "zun", "abn", "Runde", "Reihe", "wenden", "Fadenring",
   "Masche", "Maschen", "feste Masche", "Stäbchen", "hMg", "vMg", "FbW"]
 language_markers = []
+
+[print]
+# preferred spellings when writing a pattern; anything missing uses the first variant above
+round = "Rd."
+row = "R."
+ring = "in MR"
+each = "in jede M"
+same = "in 1 M"
+skip = "überspr."
+stitch_word = "M"
+together = "zus. abm."
+color_change = "FbW"
+palette = "Farben"
+blo = "nur hMg"
+flo = "nur vMg"

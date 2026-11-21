@@ -44,3 +44,13 @@ markers = ["sc", "hdc", "sl st", "slst", "hdc2tog", "single crochet", "half doub
   "US terms", "US terminology", "(US)"]
 language_markers = ["ch", "dc", "tr", "inc", "dec", "Rnd", "Round", "Row", "turn", "st", "sts",
   "magic ring", "around", "stitch", "chain"]
+
+[print]
+round = "Rnd"
+row = "Row"
+ring = "in MR"
+each = "in each st"
+same = "in next st"
+skip = "sk"
+color_change = "change to"
+palette = "Colors"
