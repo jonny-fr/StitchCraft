@@ -15,11 +15,18 @@ from stitchcraft_core.yarn.templates import template_for
 
 SAMPLE_SPACING = 0.5  # x yarn radius
 RING_RADIUS = 3.0  # x yarn radius
-CONTACT_ITERATIONS = 60
+RING_HOLE_DEPTH = 2.2  # x yarn radius: legs of round 1 pass this far inside the ring yarn
+CONTACT_ITERATIONS = 200  # upper bound
+CONTACT_SETTLED = 1.0  # x one diameter: stop early once every pair is this far apart
+CONTACT_MARGIN = 1.15  # push apart to this x one diameter, so the spacing pass cannot undo it
+CONTACT_OVERRELAX = 1.9  # over-relaxed contact projection; converges in far fewer iterations
+CONTACT_REFRESH = 3  # iterations between rebuilds of the candidate pair list
+CONTACT_SKIN = 0.4  # x yarn radius: candidates are listed this far beyond the contact distance
+BEND_SMOOTHING = 0.1  # per iteration: the yarn resists folding up under contact pushes
 ANCHOR_STIFFNESS = 0.002
-FINAL_SPACING_SWEEPS = 30
 AFFECTED_DEPTH = 0.02  # x yarn radius: below this a contact counts as touching, not penetrating
 EXCLUDE_ARC = 4.0  # x yarn radius: neighbours along the yarn closer than this never collide
+SIBLING_STEP = 4.4  # x yarn radius: stitches sharing a parent sit side by side in its hole
 
 
 @dataclass
@@ -86,6 +93,7 @@ def _control_points(g: StitchGraph, shape: Shape, r: float):
         ctrl.extend(_ring_loop(ring_centre, ring_axis, x[first_round[0]], RING_RADIUS * r))
         owners.extend([g.ring] * (len(ctrl)))
 
+    slot = _sibling_slots(g)
     for k, i in enumerate(order):
         node = g.nodes[i]
         tpl = template_for(_template_name(node), node.loop)
@@ -94,23 +102,33 @@ def _control_points(g: StitchGraph, shape: Shape, r: float):
         if node.type == "ch":
             h = float(shape.heights[i])
             base = x[i] - 0.5 * h * v
+            h_below = h
         elif node.parents and g.nodes[node.parents[0]].type == "ring":
             radial = x[i] - ring_centre
             radial -= (radial @ ring_axis) * ring_axis
-            radial /= max(np.linalg.norm(radial), 1e-9)
-            # the legs pass through the ring, just inside the ring yarn
-            h = float(np.linalg.norm(x[i] - ring_centre)) - (RING_RADIUS - 2.0) * r
-            base = x[i] - h * radial
+            v = radial / max(np.linalg.norm(radial), 1e-9)
+            # the base sits on the ring yarn, the legs pass through the ring inside it
+            base = ring_centre + RING_RADIUS * r * v
+            h = float(np.linalg.norm(x[i] - base))
+            h_below = RING_HOLE_DEPTH * r / max(-float(tpl.points[:, 1].min()), 1e-9)
         else:
             h = float(np.linalg.norm(x[i] - x[node.parents].mean(axis=0))) if node.parents else 0.0
             h = h or float(shape.heights[i])
             base = x[i] - h * v
+            h_below = h
         bases = [base]
         bases += [x[p] for p in node.parents[:2]] if node.parents else []
+        place, share = slot.get(i, (0.0, 1))
+        shift = place * SIBLING_STEP * r * u
         pts = []
         for (pu, pv, pn), anchor in zip(tpl.points, tpl.anchors, strict=True):
             b = bases[anchor] if anchor < len(bases) else base
-            pts.append(b + pu * w * u + pv * h * v + pn * r * n)
+            # stitches sharing a parent fan out: the body narrows to its share of the
+            # parent at the bottom, the passes through the parent keep their full spacing
+            up = float(np.clip(pv, 0.0, 1.0))
+            width = w if pv < 0 else w * (1.0 / share + (1.0 - 1.0 / share) * up)
+            depth = pv * (h if pv >= 0 else h_below)
+            pts.append(b + pu * width * u + depth * v + pn * r * n + (1.0 - up) * shift)
         if ctrl:
             ctrl[-1] = 0.5 * (ctrl[-1] + pts[0])
             owners[-1] = i
@@ -122,12 +140,29 @@ def _control_points(g: StitchGraph, shape: Shape, r: float):
     return np.array(ctrl), np.array(owners, dtype=np.int64)
 
 
+def _sibling_slots(g: StitchGraph) -> dict[int, tuple[float, int]]:
+    """Centred slot index of each stitch among the k stitches worked into the same parent
+    (e.g. -0.5 / +0.5 for an increase), and k. The magic ring spreads its stitches itself."""
+    children: dict[int, list[int]] = {}
+    for node in g.nodes:
+        if len(node.parents) == 1 and g.nodes[node.parents[0]].type != "ring":
+            children.setdefault(node.parents[0], []).append(node.id)
+    return {
+        c: (j - 0.5 * (len(kids) - 1), len(kids))
+        for kids in children.values()
+        if len(kids) > 1
+        for j, c in enumerate(kids)
+    }
+
+
 def _ring_loop(centre, axis, first_top, radius) -> list[np.ndarray]:
     ref = first_top - centre
     ref -= (ref @ axis) * axis
     ref /= max(np.linalg.norm(ref), 1e-9)
     side = np.cross(axis, ref)
-    angles = np.linspace(-2.25 * np.pi, 0.0, 12)
+    # just under one turn, leaving 2.4 yarn radii: the tail must not lie on the loop's end
+    gap = 2.4 / RING_RADIUS
+    angles = np.linspace(-2.0 * np.pi + gap, 0.0, 12)
     return [centre + radius * (np.cos(a) * ref + np.sin(a) * side) for a in angles]
 
 
@@ -178,50 +213,69 @@ def _catmull_rom(p0, p1, p2, p3, t, alpha: float = 0.5) -> np.ndarray:
 
 
 def _window(points: np.ndarray, r: float) -> int:
+    # rounded, not ceiled: relaxation and evaluation must agree although the median step
+    # drifts slightly around SAMPLE_SPACING
     step = float(np.median(np.linalg.norm(np.diff(points, axis=0), axis=1)))
-    return int(np.ceil(EXCLUDE_ARC * r / max(step, 1e-9)))
+    return round(EXCLUDE_ARC * r / max(step, 1e-9))
 
 
 def relax_contacts(points: np.ndarray, r: float, iterations: int = CONTACT_ITERATIONS):
-    """Push apart yarn samples closer than one yarn diameter while keeping the spacing along
-    the yarn. Templates are designed nearly contact-free, so this only polishes and must not
-    change which strand passes over which."""
+    """Push apart yarn samples closer than one yarn diameter (with a margin) while keeping
+    the spacing along the yarn and a little bending stiffness. Templates are designed
+    nearly contact-free, so this only polishes and must not change which strand passes
+    over which.
+
+    Candidate pairs within the contact distance plus a skin are listed every few iterations;
+    samples move far less than the skin in between."""
     p = points.copy()
     anchor = points.copy()
-    rest = np.linalg.norm(np.diff(points, axis=0), axis=1)
+    rest = _lengths(np.diff(points, axis=0))
     window = _window(points, r)
     n = len(p)
-    for _ in range(iterations):
+    contact = 2 * r * CONTACT_MARGIN
+    candidates = np.empty((0, 2), dtype=np.int64)
+    for k in range(iterations):
         p += ANCHOR_STIFFNESS * (anchor - p)
-        pairs = cKDTree(p).query_pairs(2 * r, output_type="ndarray")
-        if len(pairs):
-            pairs = pairs[np.abs(pairs[:, 0] - pairs[:, 1]) > window]
-        if len(pairs):
-            d = p[pairs[:, 0]] - p[pairs[:, 1]]
-            length = np.maximum(np.linalg.norm(d, axis=1), 1e-9)
-            corr = (0.5 * (2 * r - length) / length)[:, None] * d
-            acc = np.zeros_like(p)
-            np.add.at(acc, pairs[:, 0], corr)
-            np.add.at(acc, pairs[:, 1], -corr)
-            count = np.bincount(pairs.ravel(), minlength=n)
-            p += acc / np.sqrt(np.maximum(count, 1))[:, None]
+        refresh = k % CONTACT_REFRESH == 0
+        if refresh:
+            candidates = cKDTree(p).query_pairs(contact + CONTACT_SKIN * r, output_type="ndarray")
+            # >= rather than >: a segment pair just outside the window has samples on it
+            candidates = candidates[candidates[:, 1] - candidates[:, 0] >= window]
+        if not len(candidates):
+            break
+        d = p[candidates[:, 0]] - p[candidates[:, 1]]
+        length = np.maximum(_lengths(d), 1e-9)
+        if refresh and length.min() >= 2 * r * CONTACT_SETTLED:
+            break
+        close = length < contact
+        pairs, d, length = candidates[close], d[close], length[close]
+        corr = (0.5 * CONTACT_OVERRELAX * (contact - length) / length)[:, None] * d
+        count = np.bincount(pairs.ravel(), minlength=n)
+        scale = 1.0 / np.sqrt(np.maximum(count, 1))
+        for axis in range(3):
+            push = np.bincount(pairs[:, 0], corr[:, axis], minlength=n)
+            push -= np.bincount(pairs[:, 1], corr[:, axis], minlength=n)
+            p[:, axis] += push * scale
+        p[1:-1] += BEND_SMOOTHING * (0.5 * (p[:-2] + p[2:]) - p[1:-1])
         for _ in range(3):
             _keep_spacing(p, rest)
-    for _ in range(FINAL_SPACING_SWEEPS):
-        _keep_spacing(p, rest)
     return p
 
 
+def _lengths(d: np.ndarray) -> np.ndarray:
+    return np.sqrt(np.einsum("ij,ij->i", d, d))
+
+
 def _keep_spacing(p: np.ndarray, rest: np.ndarray) -> None:
+    """One Jacobi sweep restoring the rest length of every segment."""
     d = p[1:] - p[:-1]
-    length = np.maximum(np.linalg.norm(d, axis=1), 1e-9)
-    corr = (0.5 * (length - rest) / length)[:, None] * d
+    length = np.maximum(_lengths(d), 1e-9)
+    step = (0.5 * (length - rest) / length)[:, None] * d
     acc = np.zeros_like(p)
-    acc[:-1] += corr
-    acc[1:] -= corr
-    count = np.full(len(p), 2.0)
-    count[[0, -1]] = 1.0
-    p += acc / count[:, None]
+    acc[:-1] += step
+    acc[1:] -= step
+    acc[1:-1] *= 0.5  # inner samples average their two segments
+    p += acc
 
 
 # --- evaluation (A5) ------------------------------------------------------------------------

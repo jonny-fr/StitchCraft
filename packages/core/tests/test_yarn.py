@@ -39,11 +39,6 @@ def test_yarn_is_one_continuous_curve(yarns, piece):
     assert steps.max() < P.yarn_radius_mm
 
 
-@pytest.mark.xfail(
-    reason="A5 not met yet (risk R1): increases, compressed rounds and turning chains still "
-    "overlap; measured values in docs/evaluation/m1.md",
-    strict=False,
-)
 @pytest.mark.parametrize("piece", ["1-square", "2-disc", "3-sphere", "4-cup", "5-hyperbolic"])
 def test_no_yarn_penetration_after_contact_relaxation(yarns, piece):
     """A5: max penetration <= 10 % of the yarn radius, <= 1 % of segment pairs affected."""
