@@ -15,6 +15,7 @@ tr = ["DStb", "Doppelstäbchen"]
 [macros]
 inc = ["zun", "Zunahme", "Zunahmen", "verd"]
 dec = ["abn", "Abnahme", "Abnahmen"]
+invdec = ["uabn", "unsichtbare Abnahme", "unsichtbare Abnahmen", "unsichtb. Abn."]
 
 [loops]
 blo = ["nur hMg", "nur in das hintere Maschenglied", "nur in die hinteren Maschenglieder", "hMg"]
@@ -31,6 +32,11 @@ ignored = ["Füllen", "Ausstopfen", "Faden abschneiden", "Faden vernähen", "Fer
 color_change = ["Farbwechsel zu", "Farbwechsel auf", "Farbwechsel", "FbW", "mit Farbe", "in Farbe"]
 palette = ["Farben", "Garnfarben"]
 glossary = ["Abkürzungen", "Abkürzungsverzeichnis", "Abk."]
+same = ["in 1 M", "in 1 Masche", "in eine M", "in eine Masche", "in einer M", "in dieselbe M",
+  "in dieselbe Masche", "in die gleiche M", "in die gleiche Masche", "in die nächste M", "in die nächste Masche"]
+skip = ["überspringen", "überspr.", "übersp.", "auslassen"]
+stitch_word = ["M", "Masche", "Maschen"]
+together = ["zus. abm.", "zus. abmaschen", "zusammen abmaschen", "zusammen abm.", "zus abm"]
 
 [detect]
 language = "de"

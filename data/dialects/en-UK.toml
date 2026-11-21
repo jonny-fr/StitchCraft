@@ -13,7 +13,8 @@ tr = ["dtr", "double treble crochet", "double treble"]
 
 [macros]
 inc = ["inc", "increase"]
-dec = ["dc2tog", "dec", "decrease"]
+dec = ["dec", "decrease"]
+invdec = ["invdec", "inv dec", "invisible decrease", "invisible dec"]
 
 [loops]
 blo = ["BLO", "in back loops only", "in back loop only", "back loop only"]
@@ -30,6 +31,11 @@ ignored = ["Stuff", "Fasten off", "Finish off", "Weave in ends"]
 color_change = ["change to", "switch to", "with colour", "with color", "in colour", "in color"]
 palette = ["Colours", "Colors", "Yarn colours"]
 glossary = ["Abbreviations", "Abbreviations used", "Glossary"]
+same = ["in same st", "in the same st", "in same stitch", "in the same stitch", "in next st",
+  "in the next st", "in next stitch", "in the next stitch", "in one st", "in 1 st"]
+skip = ["sk next", "skip next", "sk", "skip"]
+stitch_word = ["st", "sts", "stitch", "stitches"]
+together = ["together"]
 
 [detect]
 language = "en"

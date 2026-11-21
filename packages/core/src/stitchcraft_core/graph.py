@@ -13,6 +13,7 @@ from stitchcraft_core.expand import (
     ColorOp,
     EachOp,
     Op,
+    SkipOp,
     TurnOp,
     expand_row,
     pattern_size,
@@ -145,6 +146,7 @@ def build_graph(pattern: Pattern) -> StitchGraph:
             else:
                 side = prev.side
             needed = sum(o.consume for o in ops if isinstance(o, Op))
+            needed += sum(o.count for o in ops if isinstance(o, SkipOp))
             has_each = any(isinstance(o, EachOp) for o in ops)
             if prev.foundation and (has_each or needed == len(available) - 1):
                 nodes[available[0]].turning = True  # "into the 2nd chain from the hook"
@@ -163,6 +165,11 @@ def build_graph(pattern: Pattern) -> StitchGraph:
                 continue
             if isinstance(op, ColorOp):
                 color = op.color
+                continue
+            if isinstance(op, SkipOp):
+                ptr += op.count
+                if ptr > len(available):
+                    short = True
                 continue
             if isinstance(op, EachOp):
                 macro = "inc" if op.count > 1 else None

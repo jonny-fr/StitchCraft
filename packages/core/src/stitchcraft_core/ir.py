@@ -48,6 +48,23 @@ class Macro:
     count: int = 1
     loop: Loop = Loop.BOTH
     stitch: str = "sc"
+    merge: int = 2  # dec: stitches worked together ("dc3tog" = 3)
+    span: SourceSpan | None = None
+
+
+@dataclass
+class Into:
+    """Everything in ``body`` worked into one stitch ("5 dc in next st", "(dc, ch 1, dc) in st")."""
+
+    body: list[Instruction]
+    span: SourceSpan | None = None
+
+
+@dataclass
+class Skip:
+    """Leave ``count`` stitches of the previous row unworked ("sk 2")."""
+
+    count: int = 1
     span: SourceSpan | None = None
 
 
@@ -81,7 +98,7 @@ class Repeat:
     span: SourceSpan | None = None
 
 
-Instruction = Stitch | Macro | Each | Turn | ColorChange | Repeat
+Instruction = Stitch | Macro | Each | Turn | ColorChange | Repeat | Into | Skip
 
 
 @dataclass

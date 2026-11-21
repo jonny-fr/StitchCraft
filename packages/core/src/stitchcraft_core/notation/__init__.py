@@ -22,12 +22,14 @@ from stitchcraft_core.ir import (
     Diagnostic,
     Each,
     Instruction,
+    Into,
     Loop,
     Macro,
     Part,
     Pattern,
     Repeat,
     Row,
+    Skip,
     SourceSpan,
     Stitch,
     Turn,
@@ -56,9 +58,13 @@ element: LOOPMOD? item times?       -> element
        | INT X LOOPMOD? item        -> prefix_repeat
        | RING                       -> ring_only
 
-?item: stitch | macro | each | turn | group | colorchange | seq
+?item: stitch | macro | each | turn | group | colorchange | seq | into | skip | tog
 stitch: INT? STITCH INT? LOOPMOD? RING?
 macro: INT? MACRO LOOPMOD?
+into: INT? STITCH LOOPMOD? SAME     -> into_stitch
+    | group SAME                   -> into_group
+skip: SKIP INT? STW? | INT STW? SKIP
+tog: INT? STITCH TOGETHER LOOPMOD? | STITCH TOGN LOOPMOD?
 each: INT? STITCH EACH | EACH INT? STITCH
 turn: TURN
 seq: INT? SEQ
@@ -68,6 +74,7 @@ times: X INT | INT X
 count: "(" INT ")"
 
 INT: /\d+/
+TOGN: /\d+\s*tog(?!\w)/i
 X: /[x×]/i
 %import common.WS
 %ignore WS
@@ -113,11 +120,27 @@ def _parser(
     words = {**d.words, "SEQ": list(seqs)}
 
     def rx(name: str) -> str:
-        return word_regex(words[name], digit_follows=name == "LABEL") if words[name] else NEVER
+        # a digit may touch labels ("R1") and stitches ("ch11", "sc2tog")
+        glued = name in ("LABEL", "STITCH")
+        return word_regex(words[name], digit_follows=glued) if words[name] else NEVER
 
     terminals = "\n".join(
         f"{name}: /{rx(name)}/i"
-        for name in ("STITCH", "MACRO", "LOOPMOD", "RING", "TURN", "EACH", "LABEL", "CHANGE", "SEQ")
+        for name in (
+            "STITCH",
+            "MACRO",
+            "LOOPMOD",
+            "RING",
+            "TURN",
+            "EACH",
+            "LABEL",
+            "CHANGE",
+            "SEQ",
+            "SAME",
+            "SKIP",
+            "STW",
+            "TOGETHER",
+        )
     )
     # codes are case-sensitive (so "B" is a colour but "b" is not), names and hex are not
     names = word_regex(list(colors.names()))
@@ -269,9 +292,43 @@ class _ToIR(Transformer):
 
     def macro(self, meta, children):
         ints, toks = self._split(children)
+        kind = self.d.canonical(toks["MACRO"])
         m = Macro(
-            kind=self.d.canonical(toks["MACRO"]),
+            kind="dec" if kind == "invdec" else kind,
             count=int(ints[0]) if ints else 1,
+            span=self._span(meta),
+        )
+        if kind == "invdec":  # worked through the front loops only
+            m.loop = Loop.FLO
+        if "LOOPMOD" in toks:
+            m.loop = self._loop(toks["LOOPMOD"])
+        return m
+
+    def into_stitch(self, meta, children):
+        ints, toks = self._split(children)
+        st = Stitch(
+            type=self.d.canonical(toks["STITCH"]),
+            count=int(ints[0]) if ints else 1,
+            span=self._span(meta),
+        )
+        if "LOOPMOD" in toks:
+            st.loop = self._loop(toks["LOOPMOD"])
+        return Into(body=[st], span=st.span)
+
+    def into_group(self, meta, children):
+        return Into(body=children[0].body, span=self._span(meta))
+
+    def skip(self, meta, children):
+        ints, _ = self._split(children)
+        return Skip(count=int(ints[0]) if ints else 1, span=self._span(meta))
+
+    def tog(self, meta, children):
+        ints, toks = self._split(children)
+        merge = int(re.match(r"\d+", toks["TOGN"]).group()) if "TOGN" in toks else None
+        m = Macro(
+            kind="dec",
+            stitch=self.d.canonical(toks["STITCH"]),
+            merge=merge or (int(ints[0]) if ints else 2),
             span=self._span(meta),
         )
         if "LOOPMOD" in toks:
@@ -308,7 +365,7 @@ class _ToIR(Transformer):
 
 
 def _apply_loop(instr: Instruction, loop: Loop) -> None:
-    if isinstance(instr, Repeat):
+    if isinstance(instr, Repeat | Into):
         for inner in instr.body:
             _apply_loop(inner, loop)
     elif isinstance(instr, Stitch | Macro | Each) and instr.loop is Loop.BOTH:
@@ -496,7 +553,7 @@ def _palette(entries: str, palette: dict[str, str | None], span: SourceSpan) -> 
 def _walk(instrs: list[Instruction]):
     for i in instrs:
         yield i
-        if isinstance(i, Repeat):
+        if isinstance(i, Repeat | Into):
             yield from _walk(i.body)
 
 

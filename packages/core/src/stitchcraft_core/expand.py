@@ -8,10 +8,12 @@ from stitchcraft_core.ir import (
     ColorChange,
     Each,
     Instruction,
+    Into,
     Loop,
     Macro,
     Repeat,
     Row,
+    Skip,
     SourceSpan,
     Stitch,
     Turn,
@@ -52,7 +54,12 @@ class ColorOp:
     color: str
 
 
-RowOp = Op | EachOp | TurnOp | ColorOp
+@dataclass
+class SkipOp:
+    count: int
+
+
+RowOp = Op | EachOp | TurnOp | ColorOp | SkipOp
 
 
 def _ops(instr: Instruction) -> list[RowOp]:
@@ -69,8 +76,18 @@ def _ops(instr: Instruction) -> list[RowOp]:
                     Op(t, 0, share=True, macro="inc", loop=loop, span=span),
                 )
             ]
-        case Macro(kind="dec", count=n, loop=loop, stitch=t, span=span):
-            return [Op(t, 2, macro="dec", loop=loop, span=span) for _ in range(n)]
+        case Macro(kind="dec", count=n, loop=loop, stitch=t, merge=k, span=span):
+            return [Op(t, k, macro="dec", loop=loop, span=span) for _ in range(n)]
+        case Into(body=body):
+            ops = [op for i in body for op in _ops(i)]
+            made = [op for op in ops if isinstance(op, Op) and op.consume > 0]
+            for k, op in enumerate(made):
+                op.consume, op.share = (1, False) if k == 0 else (0, True)
+                if len(made) > 1 and op.macro is None:
+                    op.macro = "inc"
+            return ops
+        case Skip(count=n):
+            return [SkipOp(n)]
         case Each(type=t, count=n, loop=loop, span=span):
             return [EachOp(t, n, loop, span)]
         case Turn(span=span):
@@ -93,6 +110,8 @@ def size(instrs: list[Instruction], parents: int) -> int:
                 total += 2 * n
             case Each(count=n):
                 total += n * parents
+            case Into(body=body):
+                total += size(body, parents)
             case Repeat(body=body, times=times):
                 total += times * size(body, parents)
     return total

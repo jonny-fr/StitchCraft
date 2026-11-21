@@ -13,7 +13,8 @@ tr = ["tr", "treble crochet", "treble"]
 
 [macros]
 inc = ["inc", "increase"]
-dec = ["sc2tog", "dec", "decrease"]
+dec = ["dec", "decrease"]
+invdec = ["invdec", "inv dec", "invisible decrease", "invisible dec"]
 
 [loops]
 blo = ["BLO", "in back loops only", "in back loop only", "back loop only"]
@@ -30,11 +31,16 @@ ignored = ["Stuff", "Fasten off", "Finish off", "Weave in ends"]
 color_change = ["change to", "switch to", "with color", "with colour", "in color", "in colour"]
 palette = ["Colors", "Colours", "Yarn colors"]
 glossary = ["Abbreviations", "Abbreviations used", "Glossary"]
+same = ["in same st", "in the same st", "in same stitch", "in the same stitch", "in next st",
+  "in the next st", "in next stitch", "in the next stitch", "in one st", "in 1 st"]
+skip = ["sk next", "skip next", "sk", "skip"]
+stitch_word = ["st", "sts", "stitch", "stitches"]
+together = ["together"]
 
 [detect]
 language = "en"
 priority = 0  # preferred when US and UK cannot be told apart (with a warning)
-markers = ["sc", "hdc", "sl st", "slst", "sc2tog", "hdc2tog", "single crochet", "half double crochet",
+markers = ["sc", "hdc", "sl st", "slst", "hdc2tog", "single crochet", "half double crochet",
   "US terms", "US terminology", "(US)"]
 language_markers = ["ch", "dc", "tr", "inc", "dec", "Rnd", "Round", "Row", "turn", "st", "sts",
   "magic ring", "around", "stitch", "chain"]
