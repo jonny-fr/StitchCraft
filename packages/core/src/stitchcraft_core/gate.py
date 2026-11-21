@@ -156,9 +156,12 @@ def write_report(reference: Path, out: Path) -> str:
         f"- offen (Fotos/Blindtest nötig): {', '.join(pending) or '–'}",
         f"- nicht erfüllt: {', '.join(failed) or '–'}",
         "",
-        "Entscheidung erst, wenn A1, A2 und A6 gemessen sind (Plan §9).",
-        "",
     ]
+    decision = out.parent / "m1-decision.md"  # recorded by hand, survives regeneration
+    if decision.exists():
+        lines += ["### Entscheidung", "", decision.read_text(encoding="utf-8").strip(), ""]
+    else:
+        lines += ["Entscheidung erst, wenn A1, A2 und A6 gemessen sind (Plan §9).", ""]
     text = "\n".join(lines)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(text, encoding="utf-8")

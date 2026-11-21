@@ -19,3 +19,11 @@ def test_report_is_markdown_table(tmp_path):
     text = write_report(REFERENCE_DIR, out)
     assert out.read_text(encoding="utf-8") == text
     assert "| A5 |" in text and "Go/No-Go" in text
+
+
+def test_report_carries_recorded_decision(tmp_path):
+    out = tmp_path / "m1.md"
+    (tmp_path / "m1-decision.md").write_text("Go ohne Fotos (2026-11-21).\n", encoding="utf-8")
+    text = write_report(REFERENCE_DIR, out)
+    assert "Go ohne Fotos (2026-11-21)." in text
+    assert "Entscheidung erst" not in text
