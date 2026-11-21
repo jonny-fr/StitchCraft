@@ -79,3 +79,16 @@ def test_colour_change_reuses_cached_preview(client):
     first = client.post("/api/v1/previews", json={**body, "params": {"color": "#ff0000"}}).json()
     again = client.post("/api/v1/previews", json={**body, "params": {"color": "#00ff00"}}).json()
     assert again["id"] == first["id"] and again["cached"] is True
+
+
+def test_validate_auto_detects_dialect(client):
+    r = client.post("/api/v1/validate", json={"text": "Rnd 1: 6 sc in MR (6)"})
+    assert r.status_code == 200
+    assert r.json()["dialect"] == "en-US"
+
+
+def test_validate_auto_reports_ambiguity(client):
+    r = client.post("/api/v1/validate", json={"text": "Rnd 1: 12 dc in MR (12)", "dialect": "auto"})
+    (d,) = r.json()["diagnostics"]
+    assert d["code"] == "W_AMBIGUOUS_DIALECT"
+    assert d["params"]["candidates"] == ["en-US", "en-UK"]

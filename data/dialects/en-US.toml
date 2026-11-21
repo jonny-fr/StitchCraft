@@ -29,3 +29,12 @@ row_label_short = ["R"]
 ignored = ["Stuff", "Fasten off", "Finish off", "Weave in ends"]
 color_change = ["change to", "switch to", "with color", "with colour", "in color", "in colour"]
 palette = ["Colors", "Colours", "Yarn colors"]
+glossary = ["Abbreviations", "Abbreviations used", "Glossary"]
+
+[detect]
+language = "en"
+priority = 0  # preferred when US and UK cannot be told apart (with a warning)
+markers = ["sc", "hdc", "sl st", "slst", "sc2tog", "hdc2tog", "single crochet", "half double crochet",
+  "US terms", "US terminology", "(US)"]
+language_markers = ["ch", "dc", "tr", "inc", "dec", "Rnd", "Round", "Row", "turn", "st", "sts",
+  "magic ring", "around", "stitch", "chain"]

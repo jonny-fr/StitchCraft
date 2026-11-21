@@ -16,11 +16,11 @@ def main(argv: list[str] | None = None) -> int:
 
     v = sub.add_parser("validate", help="check a pattern, print diagnostics as JSON")
     v.add_argument("file", type=Path)
-    v.add_argument("--dialect", default="de")
+    v.add_argument("--dialect", default="auto")
 
     p = sub.add_parser("preview", help="simulate a pattern, write yarn.bin, model.glb, shape.json")
     p.add_argument("file", type=Path)
-    p.add_argument("--dialect", default="de")
+    p.add_argument("--dialect", default="auto")
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--fill", type=float, default=Params.fill)
     p.add_argument("--hook-mm", type=float, default=Params.hook_mm)

@@ -48,6 +48,8 @@
     "W_UNWORKED": "Runde/Reihe {{row}}: {{left}} Maschen der Vorreihe bleiben unbehäkelt.",
     "E_EMPTY_PATTERN": "Die Anleitung enthält keine Maschen.",
     "E_TOO_LARGE": "Die Anleitung ist zu groß für die Vorschau (höchstens {{limit}} Maschen).",
-    "W_UNKNOWN_COLOR": "Zeile {{line}}: Farbe „{{name}}“ ist unbekannt, die Vorschau nimmt eine Ersatzfarbe."
+    "W_UNKNOWN_COLOR": "Zeile {{line}}: Farbe „{{name}}“ ist unbekannt, die Vorschau nimmt eine Ersatzfarbe.",
+    "W_AMBIGUOUS_DIALECT": "Die Anleitung kann US- oder UK-Begriffe verwenden ({{candidates}}). Angenommen: {{chosen}} – bitte Dialekt wählen.",
+    "W_GLOSSARY_UNKNOWN": "Zeile {{line}}: Abkürzung „{{abbr}}“ = „{{meaning}}“ ist unbekannt und wird ignoriert."
   }
 }

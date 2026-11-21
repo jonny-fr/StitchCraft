@@ -48,6 +48,8 @@
     "W_UNWORKED": "Round/row {{row}}: {{left}} stitches of the previous row stay unworked.",
     "E_EMPTY_PATTERN": "The pattern contains no stitches.",
     "E_TOO_LARGE": "The pattern is too large to preview (at most {{limit}} stitches).",
-    "W_UNKNOWN_COLOR": "Line {{line}}: unknown colour “{{name}}”, the preview uses a stand-in."
+    "W_UNKNOWN_COLOR": "Line {{line}}: unknown colour “{{name}}”, the preview uses a stand-in.",
+    "W_AMBIGUOUS_DIALECT": "The pattern may use US or UK terms ({{candidates}}). Assumed {{chosen}} – please pick the terms.",
+    "W_GLOSSARY_UNKNOWN": "Line {{line}}: abbreviation “{{abbr}}” = “{{meaning}}” is unknown and ignored."
   }
 }

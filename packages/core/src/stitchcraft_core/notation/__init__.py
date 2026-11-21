@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import copy
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from functools import cache
 
 from lark import Lark, Token, Transformer, v_args
@@ -32,7 +32,15 @@ from stitchcraft_core.ir import (
     Stitch,
     Turn,
 )
-from stitchcraft_core.notation.dialect import Dialect, load_dialect, normalise, word_regex
+from stitchcraft_core.notation.detect import detect_dialect
+from stitchcraft_core.notation.dialect import (
+    CATEGORIES,
+    TERMINALS,
+    Dialect,
+    load_dialect,
+    normalise,
+    word_regex,
+)
 
 GRAMMAR = r"""
 start: label? body count? "."?
@@ -48,11 +56,12 @@ element: LOOPMOD? item times?       -> element
        | INT X LOOPMOD? item        -> prefix_repeat
        | RING                       -> ring_only
 
-?item: stitch | macro | each | turn | group | colorchange
+?item: stitch | macro | each | turn | group | colorchange | seq
 stitch: INT? STITCH INT? LOOPMOD? RING?
 macro: INT? MACRO LOOPMOD?
 each: INT? STITCH EACH | EACH INT? STITCH
 turn: TURN
+seq: INT? SEQ
 colorchange: CHANGE COLOR
 group: "(" body ")" | "[" body "]" | "*" body "*"
 times: X INT | INT X
@@ -71,12 +80,44 @@ class ParseResult:
     diagnostics: list[Diagnostic] = field(default_factory=list)
 
 
+NEVER = "(?!x)x"  # never matches; terminal regex for an empty word list
+
+
 @cache
-def _parser(dialect_id: str) -> Lark:
+def _dialect(
+    dialect_id: str,
+    aliases: tuple[tuple[str, str, str], ...] = (),
+    seqs: tuple[str, ...] = (),
+) -> Dialect:
+    """The dialect with glossary synonyms added and sequence abbreviations taken out of
+    the vocabulary (so a redefined "zun" means the glossary's instructions)."""
     d = load_dialect(dialect_id)
+    if not aliases and not seqs:
+        return d
+    d = d.with_aliases(aliases)
+    gone = {normalise(w) for w in seqs}
+    words = {
+        k: [w for w in v if k not in TERMINALS.values() or normalise(w) not in gone]
+        for k, v in d.words.items()
+    }
+    return replace(d, words=words)
+
+
+@cache
+def _parser(
+    dialect_id: str,
+    aliases: tuple[tuple[str, str, str], ...] = (),
+    seqs: tuple[str, ...] = (),
+) -> Lark:
+    d = _dialect(dialect_id, aliases, seqs)
+    words = {**d.words, "SEQ": list(seqs)}
+
+    def rx(name: str) -> str:
+        return word_regex(words[name], digit_follows=name == "LABEL") if words[name] else NEVER
+
     terminals = "\n".join(
-        f"{name}: /{word_regex(d.words[name], digit_follows=name == 'LABEL')}/i"
-        for name in ("STITCH", "MACRO", "LOOPMOD", "RING", "TURN", "EACH", "LABEL", "CHANGE")
+        f"{name}: /{rx(name)}/i"
+        for name in ("STITCH", "MACRO", "LOOPMOD", "RING", "TURN", "EACH", "LABEL", "CHANGE", "SEQ")
     )
     # codes are case-sensitive (so "B" is a colour but "b" is not), names and hex are not
     names = word_regex(list(colors.names()))
@@ -116,11 +157,18 @@ class _Label:
 
 @v_args(meta=True)
 class _ToIR(Transformer):
-    def __init__(self, dialect: Dialect, ctx: _LineCtx, refs: list[ColorChange]):
+    def __init__(
+        self,
+        dialect: Dialect,
+        ctx: _LineCtx,
+        refs: list[ColorChange],
+        seqs: dict[str, list[Instruction]] | None = None,
+    ):
         super().__init__()
         self.d = dialect
         self.ctx = ctx
         self.refs = refs  # every colour change, for the palette check after parsing
+        self.seqs = seqs or {}  # glossary abbreviations that stand for several instructions
 
     def _span(self, meta) -> SourceSpan | None:
         if getattr(meta, "empty", True):
@@ -241,6 +289,14 @@ class _ToIR(Transformer):
     def turn(self, meta, children):
         return Turn(span=self._span(meta))
 
+    def seq(self, meta, children):
+        ints, toks = self._split(children)
+        span = self._span(meta)
+        body = copy.deepcopy(self.seqs[normalise(toks["SEQ"])])
+        for instr in _walk(body):
+            instr.span = span
+        return Repeat(body=body, times=int(ints[0]) if ints else 1, span=span)
+
     def group(self, meta, children):
         return Repeat(body=children[0], times=1, span=self._span(meta))
 
@@ -259,10 +315,8 @@ def _apply_loop(instr: Instruction, loop: Loop) -> None:
         instr.loop = loop
 
 
-def parse(text: str, dialect: str = "de") -> ParseResult:
-    d = load_dialect(dialect)
-    parser = _parser(dialect)
-    label_re = re.compile(
+def _label_re(d: Dialect) -> re.Pattern[str]:
+    return re.compile(
         r"^\s*(?:"
         + word_regex(d.words["LABEL"], digit_follows=True)
         + r"\s*\d|\d+\.\s*"
@@ -270,29 +324,110 @@ def parse(text: str, dialect: str = "de") -> ParseResult:
         + ")",
         re.IGNORECASE,
     )
+
+
+_SEP = r"\s*(?:=|:|–|—|\s-\s)\s*"
+_ENTRY = re.compile(r"^\s*(?P<abbr>[^\s=:–—][^=:–—]{0,29}?)" + _SEP + r"(?P<meaning>\S.*?)\s*$")
+_SPLIT = re.compile(r"[,;]\s*(?=[^,;=:–—]{1,30}" + _SEP + ")")
+
+
+@dataclass
+class _Glossary:
+    lines: set[int] = field(default_factory=set)
+    aliases: list[tuple[str, str, str]] = field(default_factory=list)
+    seqs: dict[str, list[Instruction]] = field(default_factory=dict)
+    seq_words: list[str] = field(default_factory=list)
+    diagnostics: list[Diagnostic] = field(default_factory=list)
+
+
+def _glossary(lines: list[str], d: Dialect) -> _Glossary:
+    """'Abkürzungen: fe = feste Masche, ...' (and the entry lines below it) -> local vocabulary.
+
+    A meaning that is one known term becomes a synonym; one that parses as instructions
+    ("1 fM, zun") becomes an abbreviation expanded wherever it is used."""
+    out = _Glossary()
+    if not d.words["GLOSSARY"]:
+        return out
+    header = re.compile(r"^\s*" + word_regex(d.words["GLOSSARY"]) + r"\s*:(.*)$", re.IGNORECASE)
+    label_re = _label_re(d)
+    entries: list[tuple[str, str, SourceSpan]] = []
+    offset = 0
+    in_block = False
+    for lineno, raw in enumerate(lines, start=1):
+        line = raw.rstrip("\r\n")
+        ctx = _LineCtx(offset, lineno)
+        offset += len(raw)
+        if m := header.match(line):
+            in_block = True
+            out.lines.add(lineno)
+            rest = m.group(1)
+        elif in_block and line.strip() and not label_re.match(line) and _ENTRY.match(line):
+            out.lines.add(lineno)
+            rest = line
+        else:
+            in_block = False
+            continue
+        for chunk in filter(str.strip, _SPLIT.split(rest)):
+            if e := _ENTRY.match(chunk):
+                entries.append((e["abbr"].strip(), e["meaning"], ctx.span(0, len(line))))
+
+    base = _parser(d.id)
+    for abbr, meaning, span in entries:
+        term = normalise(re.sub(r"\([^)]*\)", "", meaning).strip(" .,;"))
+        if term in d.lookup and d.lookup[term][0] in CATEGORIES:
+            out.aliases.append((abbr, *d.lookup[term]))
+            continue
+        try:
+            label, body, count = _ToIR(d, _LineCtx(0, 0), []).transform(base.parse(meaning))
+        except LarkError:
+            label = body = None
+        if label is None and body and not any(isinstance(i, Turn) for i in _walk(body)):
+            out.seqs[normalise(abbr)] = body
+            out.seq_words.append(abbr)
+        else:
+            params: dict[str, object] = {"abbr": abbr, "meaning": meaning}
+            out.diagnostics.append(Diagnostic("W_GLOSSARY_UNKNOWN", "warning", span, params))
+    return out
+
+
+def parse(text: str, dialect: str = "de") -> ParseResult:
+    diags: list[Diagnostic] = []
+    if dialect == "auto":
+        detected = detect_dialect(text)
+        dialect = detected.dialect
+        if detected.ambiguous:
+            params: dict[str, object] = {"chosen": dialect, "candidates": detected.candidates}
+            diags.append(Diagnostic("W_AMBIGUOUS_DIALECT", "warning", None, params))
+    lines = text.splitlines(keepends=True)
+    glossary = _glossary(lines, load_dialect(dialect))
+    diags += glossary.diagnostics
+    aliases = tuple(glossary.aliases)
+    seq_words = tuple(glossary.seq_words)
+    d = _dialect(dialect, aliases, seq_words)
+    parser = _parser(dialect, aliases, seq_words)
+    label_re = _label_re(d)
     ignored_re = re.compile(r"^\s*" + word_regex(d.words["IGNORED"]), re.IGNORECASE)
     palette_re = re.compile(r"^\s*" + word_regex(d.words["PALETTE"]) + r"\s*:(.*)$", re.IGNORECASE)
 
     part = Part()
-    diags: list[Diagnostic] = []
     offset = 0
     last_number = 0
     last_kind: str | None = None
     palette: dict[str, str | None] = {}
     refs: list[ColorChange] = []
     pending: list[Instruction] = []  # colour change on a line of its own, for the next row
-    for lineno, raw in enumerate(text.splitlines(keepends=True), start=1):
+    for lineno, raw in enumerate(lines, start=1):
         line = raw.rstrip("\r\n")
         ctx = _LineCtx(offset, lineno)
         offset += len(raw)
-        if not line.strip():
+        if not line.strip() or lineno in glossary.lines:
             continue
         if m := palette_re.match(line):
             diags += _palette(m.group(1), palette, ctx.span(0, len(line)))
             continue
         try:
             tree = parser.parse(line)
-            label, body, count = _ToIR(d, ctx, refs).transform(tree)
+            label, body, count = _ToIR(d, ctx, refs, glossary.seqs).transform(tree)
         except LarkError as exc:
             col = getattr(exc, "column", None)
             col = col if isinstance(col, int) and col > 0 else 1

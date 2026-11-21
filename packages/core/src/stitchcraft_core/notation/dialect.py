@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import cache
 
 from stitchcraft_core.data import data_dir, load_toml
 
 CATEGORIES = ("stitches", "macros", "loops")
+TERMINALS = {"stitches": "STITCH", "macros": "MACRO", "loops": "LOOPMOD"}
 
 
 def normalise(word: str) -> str:
@@ -42,6 +43,20 @@ class Dialect:
     def canonical(self, word: str) -> str:
         return self.lookup[normalise(word)][1]
 
+    def with_aliases(self, aliases: tuple[tuple[str, str, str], ...]) -> Dialect:
+        """Copy with extra (word, category, canonical) vocabulary, e.g. from a glossary block.
+
+        An alias replaces any meaning the word had before."""
+        lookup = dict(self.lookup)
+        words = {k: list(v) for k, v in self.words.items()}
+        for word, category, canonical in aliases:
+            key = normalise(word)
+            for terminal in TERMINALS.values():
+                words[terminal] = [w for w in words[terminal] if normalise(w) != key]
+            lookup[key] = (category, canonical)
+            words[TERMINALS[category]].append(word)
+        return replace(self, lookup=lookup, words=words)
+
 
 def available_dialects() -> list[str]:
     return sorted(p.stem for p in (data_dir() / "dialects").glob("*.toml"))
@@ -68,6 +83,7 @@ def load_dialect(dialect_id: str) -> Dialect:
     words["IGNORED"] = kw["ignored"]
     words["CHANGE"] = kw["color_change"]
     words["PALETTE"] = kw["palette"]
+    words["GLOSSARY"] = kw.get("glossary", [])
     for v in kw["round_label"]:
         lookup[normalise(v)] = ("label", "round")
     for v in kw["row_label"]:

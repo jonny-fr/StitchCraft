@@ -8,12 +8,12 @@ from stitchcraft_core.notation.dialect import available_dialects
 
 class PatternIn(BaseModel):
     text: str = Field(max_length=200_000)
-    dialect: str = "de"
+    dialect: str = "auto"
 
     @field_validator("dialect")
     @classmethod
     def known_dialect(cls, v: str) -> str:
-        if v not in available_dialects():
+        if v != "auto" and v not in available_dialects():
             raise ValueError(f"unknown dialect {v!r}")
         return v
 

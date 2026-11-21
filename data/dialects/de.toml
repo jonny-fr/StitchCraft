@@ -30,3 +30,11 @@ row_label_short = ["R"]
 ignored = ["Füllen", "Ausstopfen", "Faden abschneiden", "Faden vernähen", "Fertigstellen", "Beenden"]
 color_change = ["Farbwechsel zu", "Farbwechsel auf", "Farbwechsel", "FbW", "mit Farbe", "in Farbe"]
 palette = ["Farben", "Garnfarben"]
+glossary = ["Abkürzungen", "Abkürzungsverzeichnis", "Abk."]
+
+[detect]
+language = "de"
+priority = 0
+markers = ["fM", "Lm", "Km", "hStb", "Stb", "DStb", "zun", "abn", "Runde", "Reihe", "wenden", "Fadenring",
+  "Masche", "Maschen", "feste Masche", "Stäbchen", "hMg", "vMg", "FbW"]
+language_markers = []
