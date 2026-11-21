@@ -70,10 +70,10 @@ def tube_mesh(yarn: YarnPath, sides: int = 8):
         + np.sin(angles)[None, :, None] * binormal[:, None]
     )
     vertices = (p[:, None] + yarn.radius[:, None, None] * ring).reshape(-1, 3)
-    i = np.arange(len(p) - 1)[:, None] * sides
+    ring_start = np.arange(len(p) - 1)[:, None] * sides
     j = np.arange(sides)[None, :]
-    a = i + j
-    b = i + (j + 1) % sides
+    a = ring_start + j
+    b = ring_start + (j + 1) % sides
     c = a + sides
     d = b + sides
     faces = np.concatenate([np.stack([a, b, c], -1), np.stack([b, d, c], -1)], axis=1).reshape(

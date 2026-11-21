@@ -195,7 +195,7 @@ class _ToIR(Transformer):
     def macro(self, meta, children):
         ints, toks = self._split(children)
         m = Macro(
-            kind=self.d.canonical(toks["MACRO"]),  # type: ignore[arg-type]
+            kind=self.d.canonical(toks["MACRO"]),
             count=int(ints[0]) if ints else 1,
             span=self._span(meta),
         )
@@ -277,7 +277,7 @@ def parse(text: str, dialect: str = "de") -> ParseResult:
                     i.into_ring = True
         for number in range(first, last + 1):
             instrs = body if number == first else copy.deepcopy(body)
-            part.rows.append(Row(number, kind, instrs, count, line_span))  # type: ignore[arg-type]
+            part.rows.append(Row(number, kind, instrs, count, line_span))
         last_number, last_kind = last, kind
 
     return ParseResult(Pattern(dialect=d.id, parts=[part]), diags)

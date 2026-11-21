@@ -33,7 +33,7 @@ def validate(text: str, dialect: str = "de") -> ValidationResult:
         parsed.diagnostics + graph.diagnostics,
         key=lambda d: (d.span is None, d.span.start if d.span else 0),
     )
-    rows = [
+    rows: list[dict[str, object]] = [
         {
             "number": r.number,
             "kind": r.kind,

@@ -46,3 +46,4 @@ strict = false
 warn_unused_ignores = true
 ignore_missing_imports = true
 files = ["packages/core/src", "services/api/src"]
+plugins = ["pydantic.mypy"]

@@ -44,11 +44,11 @@ def main(argv: list[str] | None = None) -> int:
         from stitchcraft_core.pipeline import preview
 
         params = Params(fill=args.fill, hook_mm=args.hook_mm, yarn_mm=args.yarn_mm)
-        result = preview(args.file.read_text(encoding="utf-8"), args.dialect, params)
+        made = preview(args.file.read_text(encoding="utf-8"), args.dialect, params)
         args.out.mkdir(parents=True, exist_ok=True)
-        (args.out / "yarn.bin").write_bytes(encode_yarn_bin(result.yarn))
-        (args.out / "model.glb").write_bytes(glb_bytes(result.yarn))
-        (args.out / "shape.json").write_text(json.dumps(shape_json(result)), encoding="utf-8")
+        (args.out / "yarn.bin").write_bytes(encode_yarn_bin(made.yarn))
+        (args.out / "model.glb").write_bytes(glb_bytes(made.yarn))
+        (args.out / "shape.json").write_text(json.dumps(shape_json(made)), encoding="utf-8")
         return 0
     if args.cmd == "gate":
         from stitchcraft_core.gate import write_report

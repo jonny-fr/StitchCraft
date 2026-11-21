@@ -32,4 +32,4 @@ class ParamsIn(BaseModel):
 
 
 class PreviewIn(PatternIn):
-    params: ParamsIn = ParamsIn()
+    params: ParamsIn = Field(default_factory=ParamsIn)
