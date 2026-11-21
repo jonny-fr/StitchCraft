@@ -11,3 +11,4 @@ web/dist/
 *.egg-info/
 .DS_Store
 .idea/workspace.xml
+web/*.tsbuildinfo
