@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ApiError, defaultParams, paramsValid, requestPreview, validate, type Diagnostic, type PaletteColor, type Params, type PreviewResult, type Validation } from "./api";
+import { PatternEditor, type EditorHandle } from "./editor/PatternEditor";
+import type { Word } from "./editor/language";
+import { ApiError, defaultParams, fetchVocabulary, paramsValid, requestPreview, validate, type Diagnostic, type PaletteColor, type Params, type PreviewResult, type Validation } from "./api";
 import { samples } from "./samples";
 import { Viewer, type View, type ViewerHandle } from "./viewer/Viewer";
 
 const DIALECTS = [
+  { id: "auto", label: "auto" },
   { id: "de", label: "Deutsch" },
   { id: "en-US", label: "English (US)" },
   { id: "en-UK", label: "English (UK)" },
@@ -48,7 +51,8 @@ export default function App() {
   const [overlayOpacity, setOverlayOpacity] = useState(0.5);
   const [silhouette, setSilhouette] = useState(false);
   const [tab, setTab] = useState<"editor" | "viewer">("editor");
-  const editor = useRef<HTMLTextAreaElement>(null);
+  const editor = useRef<EditorHandle>(null);
+  const [vocab, setVocab] = useState<Record<string, Word[]>>({});
   const viewer = useRef<ViewerHandle>(null);
   const showFps = new URLSearchParams(location.search).has("fps");
 
@@ -66,6 +70,16 @@ export default function App() {
     }, 250);
     return () => (clearTimeout(id), ctrl.abort());
   }, [text, dialect]);
+
+  // vocabulary for highlighting and hover: the chosen dialect, or the detected one
+  const wordsDialect = dialect === "auto" ? (validation?.dialect ?? "de") : dialect;
+  useEffect(() => {
+    if (vocab[wordsDialect]) return;
+    fetchVocabulary(wordsDialect).then((w) => setVocab((v) => ({ ...v, [wordsDialect]: w }))).catch(() => undefined);
+  }, [wordsDialect, vocab]);
+  const words = useMemo(() => vocab[wordsDialect] ?? [], [vocab, wordsDialect]);
+  const describe = (w: Word) => t(`terms.${w.canonical}`, { defaultValue: t(`categories.${w.category}`, { defaultValue: w.canonical }) });
+  const ambiguous = validation?.diagnostics.find((d) => d.code === "W_AMBIGUOUS_DIALECT");
 
   const message = (d: Diagnostic) => t(`diagnostics.${d.code}`, { ...d.params, line: d.span?.line });
   const runPreview = useCallback(async () => {
@@ -101,14 +115,10 @@ export default function App() {
   const selectStitch = (id: number) => {
     setSelected(id);
     const span = stitchById.get(id)?.span;
-    if (span && editor.current) {
-      editor.current.focus();
-      editor.current.setSelectionRange(span.start, span.end);
-    }
+    if (span) editor.current?.select(span.start, span.end);
   };
   // editor -> 3D: highlight the first stitch made by the token under the caret
-  const onCaret = () => {
-    const pos = editor.current?.selectionStart ?? -1;
+  const onCaret = (pos: number) => {
     const hit = result?.shape.stitches.find((s) => s.span && s.span.start <= pos && pos <= s.span.end);
     if (hit) setSelected(hit.id);
   };
@@ -145,7 +155,7 @@ export default function App() {
           <label>
             {t("app.dialect")}{" "}
             <select value={dialect} onChange={(e) => setDialect(e.target.value)}>
-              {DIALECTS.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
+              {DIALECTS.map((d) => <option key={d.id} value={d.id}>{d.id === "auto" ? t("app.autoDialect", { dialect: validation?.dialect ?? "–" }) : d.label}</option>)}
             </select>
           </label>
           <label>
@@ -156,13 +166,25 @@ export default function App() {
             </select>
           </label>
         </div>
-        <textarea
+        {ambiguous && (
+          <div className="row ambiguous">
+            {t("app.pickDialect")}
+            {(ambiguous.params.candidates as string[]).map((c) => (
+              <button key={c} onClick={() => setDialect(c)}>{DIALECTS.find((d) => d.id === c)?.label ?? c}</button>
+            ))}
+          </div>
+        )}
+        <PatternEditor
           ref={editor}
-          aria-label={t("app.pattern")}
+          label={t("app.pattern")}
           value={text}
-          spellCheck={false}
-          onChange={(e) => setText(e.target.value)}
-          onSelect={onCaret}
+          onChange={setText}
+          words={words}
+          diagnostics={validation?.diagnostics ?? []}
+          rows={validation?.rows ?? []}
+          message={message}
+          describe={describe}
+          onCaret={onCaret}
         />
         <button className="primary" disabled={busy || !paramsOk} onClick={runPreview}>{busy ? t("app.computing") : t("app.preview")}</button>
         {!paramsOk && <p className="error">{t("app.invalidParams")}</p>}
@@ -174,7 +196,7 @@ export default function App() {
             <li key={i} className={d.severity}>
               <button
                 className="link"
-                onClick={() => d.span && editor.current && (editor.current.focus(), editor.current.setSelectionRange(d.span.start, d.span.end))}
+                onClick={() => d.span && editor.current?.select(d.span.start, d.span.end)}
               >
                 {message(d)}
               </button>

@@ -39,6 +39,7 @@ def validate(text: str, dialect: str = "de") -> ValidationResult:
             "kind": r.kind,
             "actual": len(graph.counting_ids(r)),
             "expected": r.expected,
+            "line": r.span.line if r.span else None,
         }
         for r in graph.rows
     ]

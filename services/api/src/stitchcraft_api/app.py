@@ -13,7 +13,7 @@ from fastapi.responses import Response, StreamingResponse
 from stitchcraft_core.data import load_toml
 from stitchcraft_core.export import encode_yarn_bin, glb_bytes, point_colors, shape_json
 from stitchcraft_core.notation import parse
-from stitchcraft_core.notation.dialect import available_dialects, load_dialect
+from stitchcraft_core.notation.dialect import available_dialects, load_dialect, vocabulary
 from stitchcraft_core.params import Params
 from stitchcraft_core.pipeline import PreviewError, cache_key, preview
 from stitchcraft_core.serialize import diagnostic_dict, validation_dict
@@ -43,6 +43,12 @@ def create_app(cache_dir: Path | None = None) -> FastAPI:
             raise HTTPException(422, f"unknown dialect {dialect!r}")
         raw = load_toml("dialects", f"{dialect}.toml")
         return {"dialect": dialect, "stitches": raw["stitches"], "macros": raw["macros"]}
+
+    @app.get("/api/v1/vocabulary")
+    def vocabulary_words(dialect: str = "de") -> dict:
+        if dialect not in available_dialects():
+            raise HTTPException(422, f"unknown dialect {dialect!r}")
+        return {"dialect": dialect, "words": vocabulary(dialect)}
 
     @app.post("/api/v1/validate")
     def validate_pattern(body: PatternIn) -> dict:

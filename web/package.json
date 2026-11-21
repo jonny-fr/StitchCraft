@@ -11,6 +11,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@codemirror/commands": "6.9.0",
+    "@codemirror/language": "6.11.3",
+    "@codemirror/lint": "6.9.0",
+    "@codemirror/state": "6.5.2",
+    "@codemirror/view": "6.38.6",
+    "@lezer/highlight": "1.2.1",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.2",
     "@react-three/postprocessing": "^3.2.2",
@@ -19,6 +25,7 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-i18next": "^18.0.3",
+    "react-resizable-panels": "3.0.6",
     "three": "^0.187.0"
   },
   "devDependencies": {

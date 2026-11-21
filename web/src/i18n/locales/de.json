@@ -37,7 +37,9 @@
     "error": "Fehler: {{message}}",
     "invalidParams": "Bitte gültige Werte für Garn, Nadel und Maschenprobe eingeben.",
     "colors": "Garnfarben",
-    "colorFallback": "Farbe nicht in der Anleitung festgelegt – frei wählbar"
+    "colorFallback": "Farbe nicht in der Anleitung festgelegt – frei wählbar",
+    "autoDialect": "automatisch ({{dialect}})",
+    "pickDialect": "US- oder UK-Begriffe?"
   },
   "diagnostics": {
     "E_SYNTAX": "Zeile {{line}}: unverständliche Anweisung.",
@@ -51,5 +53,34 @@
     "W_UNKNOWN_COLOR": "Zeile {{line}}: Farbe „{{name}}“ ist unbekannt, die Vorschau nimmt eine Ersatzfarbe.",
     "W_AMBIGUOUS_DIALECT": "Die Anleitung kann US- oder UK-Begriffe verwenden ({{candidates}}). Angenommen: {{chosen}} – bitte Dialekt wählen.",
     "W_GLOSSARY_UNKNOWN": "Zeile {{line}}: Abkürzung „{{abbr}}“ = „{{meaning}}“ ist unbekannt und wird ignoriert."
+  },
+  "terms": {
+    "ch": "Luftmasche",
+    "slst": "Kettmasche",
+    "sc": "feste Masche (US sc, UK dc)",
+    "hdc": "halbes Stäbchen (US hdc, UK htr)",
+    "dc": "Stäbchen (US dc, UK tr)",
+    "tr": "Doppelstäbchen (US tr, UK dtr)",
+    "inc": "Zunahme: 2 Maschen in eine Masche",
+    "dec": "Abnahme: 2 Maschen zusammen abmaschen",
+    "invdec": "unsichtbare Abnahme durch die vorderen Maschenglieder",
+    "blo": "nur ins hintere Maschenglied",
+    "flo": "nur ins vordere Maschenglied",
+    "round": "Runde",
+    "row": "Reihe"
+  },
+  "categories": {
+    "label": "Runden-/Reihenbezeichnung",
+    "ring": "Magic Ring (Fadenring)",
+    "each": "in jede Masche der Vorrunde",
+    "same": "alles in dieselbe Einstichstelle",
+    "skip": "Maschen der Vorreihe überspringen",
+    "together": "zusammen abmaschen",
+    "stitch_word": "Masche",
+    "turn": "Arbeit wenden",
+    "color_change": "Farbwechsel",
+    "palette": "Farbpalette",
+    "glossary": "Abkürzungsverzeichnis",
+    "ignored": "Hinweis ohne Einfluss auf die Form"
   }
 }

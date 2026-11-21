@@ -92,3 +92,20 @@ def test_validate_auto_reports_ambiguity(client):
     (d,) = r.json()["diagnostics"]
     assert d["code"] == "W_AMBIGUOUS_DIALECT"
     assert d["params"]["candidates"] == ["en-US", "en-UK"]
+
+
+def test_vocabulary_lists_every_word_with_its_meaning(client):
+    words = client.get("/api/v1/vocabulary", params={"dialect": "de"}).json()["words"]
+    by_word = {w["word"]: w for w in words}
+    assert by_word["fM"] == {"word": "fM", "category": "stitch", "canonical": "sc"}
+    assert by_word["zun"]["category"] == "macro"
+    assert by_word["nur hMg"] == {"word": "nur hMg", "category": "loop", "canonical": "blo"}
+    assert by_word["Rd."]["category"] == "label"
+    assert by_word["überspr."]["category"] == "skip"
+
+
+def test_validate_rows_carry_their_source_line(client):
+    r = client.post(
+        "/api/v1/validate", json={"text": "\n6 fM in MR\nRd. 2-3: 6 fM", "dialect": "de"}
+    )
+    assert [row["line"] for row in r.json()["rows"]] == [2, 3, 3]

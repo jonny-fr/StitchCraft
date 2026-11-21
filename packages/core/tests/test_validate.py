@@ -8,8 +8,8 @@ def test_validate_reports_parse_and_count_diagnostics_together():
     res = validate("6 fM in MR\nwirr wirr\n6x zun (13)", dialect="de")
     assert [d.code for d in res.diagnostics] == ["W_PROSE", "E_COUNT_MISMATCH"]
     assert res.rows == [
-        {"number": 1, "kind": "round", "actual": 6, "expected": None},
-        {"number": 2, "kind": "round", "actual": 12, "expected": 13},
+        {"number": 1, "kind": "round", "actual": 6, "expected": None, "line": 1},
+        {"number": 2, "kind": "round", "actual": 12, "expected": 13, "line": 3},
     ]
     assert not res.ok
 

@@ -1,8 +1,9 @@
+import type { Word } from "./editor/language";
 import { decodeYarnBin, type Yarn } from "./viewer/yarn";
 
 export interface Span { start: number; end: number; line: number; col: number }
 export interface Diagnostic { code: string; severity: "error" | "warning" | "info"; span: Span | null; params: Record<string, unknown> }
-export interface RowCount { number: number; kind: string; actual: number; expected: number | null }
+export interface RowCount { number: number; kind: string; actual: number; expected: number | null; line?: number | null }
 export interface Validation { dialect: string; ok: boolean; total_stitches: number; diagnostics: Diagnostic[]; rows: RowCount[] }
 export interface Params {
   yarn_mm: number; hook_mm: number; gauge_stitches: number | null; gauge_rows: number | null;
@@ -61,4 +62,9 @@ export async function requestPreview(text: string, dialect: string, params: Para
     fetch(`/api/v1/previews/${id}/shape.json`).then((r) => json<Shape>(r)),
   ]);
   return { id, yarn: decodeYarnBin(bin), shape };
+}
+
+export async function fetchVocabulary(dialect: string): Promise<Word[]> {
+  const res = await fetch(`/api/v1/vocabulary?dialect=${encodeURIComponent(dialect)}`);
+  return (await json<{ words: Word[] }>(res)).words;
 }

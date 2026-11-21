@@ -37,7 +37,9 @@
     "error": "Error: {{message}}",
     "invalidParams": "Please enter valid values for yarn, hook and gauge.",
     "colors": "Yarn colours",
-    "colorFallback": "Colour not set by the pattern – pick one"
+    "colorFallback": "Colour not set by the pattern – pick one",
+    "autoDialect": "automatic ({{dialect}})",
+    "pickDialect": "US or UK terms?"
   },
   "diagnostics": {
     "E_SYNTAX": "Line {{line}}: instruction not understood.",
@@ -51,5 +53,34 @@
     "W_UNKNOWN_COLOR": "Line {{line}}: unknown colour “{{name}}”, the preview uses a stand-in.",
     "W_AMBIGUOUS_DIALECT": "The pattern may use US or UK terms ({{candidates}}). Assumed {{chosen}} – please pick the terms.",
     "W_GLOSSARY_UNKNOWN": "Line {{line}}: abbreviation “{{abbr}}” = “{{meaning}}” is unknown and ignored."
+  },
+  "terms": {
+    "ch": "chain",
+    "slst": "slip stitch",
+    "sc": "single crochet (US sc, UK dc)",
+    "hdc": "half double crochet (US hdc, UK htr)",
+    "dc": "double crochet (US dc, UK tr)",
+    "tr": "treble (US tr, UK dtr)",
+    "inc": "increase: 2 stitches in one stitch",
+    "dec": "decrease: 2 stitches worked together",
+    "invdec": "invisible decrease through the front loops",
+    "blo": "back loop only",
+    "flo": "front loop only",
+    "round": "round",
+    "row": "row"
+  },
+  "categories": {
+    "label": "round/row label",
+    "ring": "magic ring",
+    "each": "into every stitch of the previous round",
+    "same": "all into the same stitch",
+    "skip": "skip stitches of the previous row",
+    "together": "worked together",
+    "stitch_word": "stitch",
+    "turn": "turn the work",
+    "color_change": "colour change",
+    "palette": "colour palette",
+    "glossary": "abbreviations",
+    "ignored": "note without effect on the shape"
   }
 }

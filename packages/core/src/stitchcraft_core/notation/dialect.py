@@ -102,3 +102,40 @@ def load_dialect(dialect_id: str) -> Dialect:
         lookup=lookup,
         words=words,
     )
+
+
+# keyword table -> category reported to the editor (highlighting, hover)
+KEYWORD_CATEGORIES = {
+    "round_label": "label",
+    "row_label": "label",
+    "row_label_short": "label",
+    "ring": "ring",
+    "turn": "turn",
+    "each": "each",
+    "same": "same",
+    "skip": "skip",
+    "stitch_word": "stitch_word",
+    "together": "together",
+    "color_change": "color_change",
+    "palette": "palette",
+    "glossary": "glossary",
+    "ignored": "ignored",
+}
+
+
+def vocabulary(dialect_id: str) -> list[dict[str, str]]:
+    """Every word of a dialect with its category and canonical meaning."""
+    if dialect_id not in available_dialects():
+        raise ValueError(f"unknown dialect {dialect_id!r}")
+    raw = load_toml("dialects", f"{dialect_id}.toml")
+    out = []
+    for category, singular in (("stitches", "stitch"), ("macros", "macro"), ("loops", "loop")):
+        for canonical, variants in raw[category].items():
+            out += [{"word": v, "category": singular, "canonical": canonical} for v in variants]
+    for key, category in KEYWORD_CATEGORIES.items():
+        canonical = {"round_label": "round", "row_label": "row"}.get(key, key)
+        out += [
+            {"word": v, "category": category, "canonical": canonical}
+            for v in raw["keywords"].get(key, [])
+        ]
+    return out
