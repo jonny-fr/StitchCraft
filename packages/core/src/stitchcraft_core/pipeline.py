@@ -90,7 +90,9 @@ def preview(text: str, dialect: str, params: Params) -> Preview:
         "stitches": validation.total_stitches,
         "rows": len(graph.rows),
         "size_cm": [round(float(e) / 10, 1) for e in extents],
-        "yarn_length_m": round(float(np.linalg.norm(np.diff(yarn.points, axis=0), axis=1).sum()) / 1000, 2),
+        "yarn_length_m": round(
+            float(np.linalg.norm(np.diff(yarn.points, axis=0), axis=1).sum()) / 1000, 2
+        ),
         "closed": shape.closed,
         "timings": {k: round(v, 1) for k, v in timings.items()},
     }

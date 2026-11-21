@@ -6,6 +6,7 @@ requires-python = ">=3.14,<3.15"
 dependencies = [
     "lark>=1.2",
     "numpy>=2.1",
+    "pillow>=13.0.0",
     "scipy>=1.14",
     "trimesh>=4.5",
 ]

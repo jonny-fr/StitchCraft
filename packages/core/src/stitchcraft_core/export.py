@@ -65,7 +65,10 @@ def tube_mesh(yarn: YarnPath, sides: int = 8):
         normal[i] = n / length if length > 1e-12 else normal[i - 1]
     binormal = np.cross(tangent, normal)
     angles = 2 * np.pi * np.arange(sides) / sides
-    ring = np.cos(angles)[None, :, None] * normal[:, None] + np.sin(angles)[None, :, None] * binormal[:, None]
+    ring = (
+        np.cos(angles)[None, :, None] * normal[:, None]
+        + np.sin(angles)[None, :, None] * binormal[:, None]
+    )
     vertices = (p[:, None] + yarn.radius[:, None, None] * ring).reshape(-1, 3)
     i = np.arange(len(p) - 1)[:, None] * sides
     j = np.arange(sides)[None, :]
@@ -73,7 +76,9 @@ def tube_mesh(yarn: YarnPath, sides: int = 8):
     b = i + (j + 1) % sides
     c = a + sides
     d = b + sides
-    faces = np.concatenate([np.stack([a, b, c], -1), np.stack([b, d, c], -1)], axis=1).reshape(-1, 3)
+    faces = np.concatenate([np.stack([a, b, c], -1), np.stack([b, d, c], -1)], axis=1).reshape(
+        -1, 3
+    )
     mesh = trimesh.Trimesh(vertices=vertices, faces=faces, process=False)
     mesh.vertex_attributes["_STITCH_ID"] = np.repeat(yarn.stitch_ids, sides).astype(np.float32)
     return mesh

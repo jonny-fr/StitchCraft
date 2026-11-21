@@ -6,7 +6,6 @@ import time
 import numpy as np
 import pytest
 from conftest import reference_pattern
-
 from stitchcraft_core.export import decode_yarn_bin, encode_yarn_bin, glb_bytes, shape_json
 from stitchcraft_core.params import Params
 from stitchcraft_core.pipeline import cache_key, preview
