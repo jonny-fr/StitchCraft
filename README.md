@@ -25,7 +25,7 @@ cd web && pnpm install && pnpm dev        # http://localhost:5173
 
 `docker compose up --build`, http://localhost:8080 öffnen, unter „Beispiel“ `3-sphere` wählen
 und „3D-Vorschau“ klicken. Im 3D-Tab lassen sich Maschen anklicken (springt zur Stelle in
-der Anleitung), Reihen ausblenden und die Garnfarbe ändern.
+der Anleitung), Reihen ausblenden und die Garnfarben ändern.
 
 ## Notation
 
@@ -45,11 +45,27 @@ Füllen                         Hinweise werden übernommen, Freitext wird gemel
 
 „R“ ist mehrdeutig (Runde oder Reihe): Beginnt das Stück im Magic Ring, gilt es als Runde.
 
+### Farbwechsel
+
+```
+Farben: A = creme, B = rot, C = #2b2b2b     optional; Farbnamen siehe data/colors.toml
+Rd. 1: 6 fM in MR (6)                       Start in der ersten Farbe (ohne Palette: A)
+Rd. 2 (B): 6x zun (12)                      Farbe im Rundenkopf
+Rd. 3: 3 fM, FbW C, 3 fM, FbW A, 6 fM (12)  Wechsel mitten in der Runde
+FbW B                                       eigene Zeile: gilt ab der nächsten Runde
+```
+
+Varianten: `FbW X`, `Farbwechsel zu/auf X`, `mit Farbe X`, `in Farbe X`; englisch
+`change to X`, `with color X`, Codes wie `MC`/`CC1`. Codes sind Großbuchstaben, Farbnamen
+(`rot`, `blue`) und `#rrggbb` gehen direkt. Farben ohne Festlegung bekommen eine Ersatzfarbe
+und sind im Viewer frei wählbar; das ändert nur die Darstellung, nicht die Simulation.
+
 ## Bekannte Grenzen (M1)
 
 - Höchstens 5 000 Maschen pro Vorschau (≈ 7 ms pro Masche), sonst `E_TOO_LARGE`.
 - Garn durchdringt sich bei Zu-/Abnahmen noch stellenweise (Kriterium A5, siehe Protokoll).
-- Ein Teil und eine Garnfarbe pro Anleitung.
+- Ein Teil pro Anleitung; kein Tapestry/Intarsien, keine Prosa-Farbwechsel
+  („am Ende der Runde auf creme wechseln“).
 - Der Fortschritts-Endpoint `/previews/{id}/events` meldet bisher nur „fertig“; die Vorschau
   wird synchron berechnet.
 

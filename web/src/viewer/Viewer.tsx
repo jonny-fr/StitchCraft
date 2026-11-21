@@ -5,17 +5,17 @@ import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from "rea
 import {
   BufferAttribute,
   CanvasTexture,
-  Color,
   RepeatWrapping,
   Vector3,
   type BufferGeometry,
   type PerspectiveCamera,
 } from "three";
-import { buildTube, pointRangeForRows, type Yarn } from "./yarn";
+import { buildTube, pointRangeForRows, vertexColors, type Yarn } from "./yarn";
 
 export type View = "front" | "side" | "top" | "iso";
 type Controls = { target: Vector3; update(): void };
 const SIDES = 8;
+const HIGHLIGHT = "#e0533d";
 
 export interface ViewerHandle {
   snapshot(): string;
@@ -25,7 +25,7 @@ interface Props {
   yarn: Yarn;
   rowOf: Map<number, number>;
   maxRow: number;
-  color: string;
+  colorOf: Map<number, string>; // stitch id -> "#rrggbb"
   selected: number | null;
   onSelect(id: number): void;
   silhouette: boolean;
@@ -91,8 +91,8 @@ function CameraRig({ radius, view, rounds }: { radius: number; view: View; round
   return null;
 }
 
-function YarnMesh({ geometry, color, silhouette, selected, onSelect, drawCount, centre }: {
-  geometry: BufferGeometry; color: string; silhouette: boolean; selected: number | null;
+function YarnMesh({ geometry, yarn, colorOf, silhouette, selected, onSelect, drawCount, centre }: {
+  geometry: BufferGeometry; yarn: Yarn; colorOf: Map<number, string>; silhouette: boolean; selected: number | null;
   onSelect(id: number): void; drawCount: number; centre: Vector3;
 }) {
   const ply = useMemo(plyTexture, []);
@@ -100,19 +100,12 @@ function YarnMesh({ geometry, color, silhouette, selected, onSelect, drawCount, 
     geometry.setDrawRange(0, drawCount);
   }, [geometry, drawCount]);
   useEffect(() => {
-    const stitch = geometry.getAttribute("stitch");
-    let colors = geometry.getAttribute("color") as BufferAttribute | undefined;
-    if (!colors) {
-      colors = new BufferAttribute(new Float32Array(stitch.count * 3).fill(1), 3);
-      geometry.setAttribute("color", colors);
-    }
-    const hi = new Color("#e0533d");
-    for (let i = 0; i < stitch.count; i++) {
-      const on = selected !== null && stitch.getX(i) === selected;
-      colors.setXYZ(i, on ? hi.r : 1, on ? hi.g : 1, on ? hi.b : 1);
-    }
-    colors.needsUpdate = true;
-  }, [geometry, selected]);
+    const rgb = vertexColors(yarn, SIDES, colorOf, selected, HIGHLIGHT);
+    const attr = geometry.getAttribute("color") as BufferAttribute | undefined;
+    if (!attr) return void geometry.setAttribute("color", new BufferAttribute(rgb, 3));
+    (attr.array as Float32Array).set(rgb); // reuse the GPU buffer
+    attr.needsUpdate = true;
+  }, [geometry, yarn, colorOf, selected]);
 
   const pick = (e: ThreeEvent<PointerEvent>) => {
     if (e.faceIndex == null || !geometry.index) return;
@@ -127,12 +120,11 @@ function YarnMesh({ geometry, color, silhouette, selected, onSelect, drawCount, 
         <meshBasicMaterial color="black" />
       ) : (
         <meshPhysicalMaterial
-          color={color}
           vertexColors
           roughness={0.85}
-          sheen={1}
+          sheen={0.6}
           sheenRoughness={0.45}
-          sheenColor={color}
+          sheenColor="#d8d8d8"
           bumpMap={ply}
           bumpScale={0.6}
         />
@@ -142,7 +134,7 @@ function YarnMesh({ geometry, color, silhouette, selected, onSelect, drawCount, 
 }
 
 export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer(props, ref) {
-  const { yarn, rowOf, maxRow, color, selected, onSelect, silhouette, view, rounds, showFps } = props;
+  const { yarn, rowOf, maxRow, colorOf, selected, onSelect, silhouette, view, rounds, showFps } = props;
   const canvas = useRef<HTMLCanvasElement>(null);
   useImperativeHandle(ref, () => ({ snapshot: () => canvas.current?.toDataURL("image/png") ?? "" }));
 
@@ -181,7 +173,8 @@ export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer(props, ref
       )}
       <YarnMesh
         geometry={geometry}
-        color={color}
+        yarn={yarn}
+        colorOf={colorOf}
         silhouette={silhouette}
         selected={selected}
         onSelect={onSelect}

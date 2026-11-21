@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ApiError, defaultParams, paramsValid, requestPreview, validate, type Diagnostic, type Params, type PreviewResult, type Validation } from "./api";
+import { ApiError, defaultParams, paramsValid, requestPreview, validate, type Diagnostic, type PaletteColor, type Params, type PreviewResult, type Validation } from "./api";
 import { samples } from "./samples";
 import { Viewer, type View, type ViewerHandle } from "./viewer/Viewer";
 
@@ -35,6 +35,8 @@ export default function App() {
     const stored = { ...defaultParams, ...load("stitchcraft.params", {}) };
     return paramsValid(stored) ? stored : defaultParams;
   });
+  // colours picked in the viewer, keyed by code and the colour the pattern gave it
+  const [colorPicks, setColorPicks] = useState<Record<string, string>>(() => load("stitchcraft.colors", {}));
   const [validation, setValidation] = useState<Validation | null>(null);
   const [result, setResult] = useState<PreviewResult | null>(null);
   const [busy, setBusy] = useState(false);
@@ -53,6 +55,7 @@ export default function App() {
   useEffect(() => save("stitchcraft.text", text), [text]);
   useEffect(() => save("stitchcraft.dialect", dialect), [dialect]);
   useEffect(() => save("stitchcraft.params", params), [params]);
+  useEffect(() => save("stitchcraft.colors", colorPicks), [colorPicks]);
   useEffect(() => () => void (overlay && URL.revokeObjectURL(overlay)), [overlay]);
 
   // live lint, debounced
@@ -84,6 +87,13 @@ export default function App() {
 
   const stitchById = useMemo(() => new Map(result?.shape.stitches.map((s) => [s.id, s]) ?? []), [result]);
   const rowOf = useMemo(() => new Map(result?.shape.stitches.map((s) => [s.id, s.row]) ?? []), [result]);
+  const palette = result?.shape.palette ?? [];
+  const pickKey = (c: PaletteColor) => `${c.ref}:${c.hex}`;
+  const hexOf = useCallback((c: PaletteColor) => colorPicks[pickKey(c)] ?? c.hex, [colorPicks]);
+  const colorOf = useMemo(() => {
+    const hex = new Map(result?.shape.palette.map((c) => [c.ref, hexOf(c)]) ?? []);
+    return new Map(result?.shape.stitches.map((s) => [s.id, hex.get(s.color) ?? "#ffffff"]) ?? []);
+  }, [result, hexOf]);
   const rowNumbers = result?.shape.rows.map((r) => r.number) ?? [];
   const rounds = (result?.shape.rows[0]?.kind ?? "round") === "round";
 
@@ -194,7 +204,6 @@ export default function App() {
           <label>{t("app.gaugeStitches")}<input type="number" step="1" min="2" max="99" value={params.gauge_stitches ?? ""} onChange={(e) => param("gauge_stitches", num(e.target.value))} /></label>
           <label>{t("app.gaugeRows")}<input type="number" step="1" min="2" max="99" value={params.gauge_rows ?? ""} onChange={(e) => param("gauge_rows", num(e.target.value))} /></label>
           <label>{t("app.fill")} {params.fill.toFixed(1)}<input type="range" min="0" max="1" step="0.1" value={params.fill} onChange={(e) => param("fill", Number(e.target.value))} /></label>
-          <label>{t("app.color")}<input type="color" value={params.color} onChange={(e) => param("color", e.target.value)} /></label>
           <label>
             {t("app.handedness")}
             <select value={params.handedness} onChange={(e) => param("handedness", e.target.value as Params["handedness"])}>
@@ -213,7 +222,7 @@ export default function App() {
               yarn={result.yarn}
               rowOf={rowOf}
               maxRow={maxRow}
-              color={params.color}
+              colorOf={colorOf}
               selected={selected}
               onSelect={selectStitch}
               silhouette={silhouette}
@@ -238,7 +247,16 @@ export default function App() {
                 })}
               </p>
             )}
-            {sel && <p>{t("app.selected", { id: sel.id, type: sel.type, row: sel.row })}</p>}
+            {sel && <p>{t("app.selected", { id: sel.id, type: sel.type, row: sel.row, color: sel.color })}</p>}
+            <div className="row palette">
+              {t("app.colors")}:
+              {palette.map((c) => (
+                <label key={c.ref} title={c.defined ? undefined : t("app.colorFallback")}>
+                  {c.ref}{" "}
+                  <input type="color" value={hexOf(c)} onChange={(e) => setColorPicks((p) => ({ ...p, [pickKey(c)]: e.target.value }))} />
+                </label>
+              ))}
+            </div>
             <label>
               {t("app.showUpToRow", { row: Math.min(maxRow, rowNumbers.at(-1) ?? 0) })}
               <input

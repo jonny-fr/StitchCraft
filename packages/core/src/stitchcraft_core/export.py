@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from stitchcraft_core import colors
 from stitchcraft_core.yarn import YarnPath
 
 if TYPE_CHECKING:
@@ -48,8 +49,10 @@ def decode_yarn_bin(blob: bytes) -> dict[str, np.ndarray]:
     return {"points": points, "radius": radius, "stitch_ids": ids, "segment_offsets": segments}
 
 
-def tube_mesh(yarn: YarnPath, sides: int = 8):
-    """Tube around the yarn centre line with parallel-transport frames."""
+def tube_mesh(yarn: YarnPath, sides: int = 8, rgba: np.ndarray | None = None):
+    """Tube around the yarn centre line with parallel-transport frames.
+
+    ``rgba``: optional (n, 4) uint8 per yarn point, exported as vertex colours."""
     import trimesh
 
     p = yarn.points
@@ -80,14 +83,31 @@ def tube_mesh(yarn: YarnPath, sides: int = 8):
         -1, 3
     )
     mesh = trimesh.Trimesh(vertices=vertices, faces=faces, process=False)
+    if rgba is not None:
+        mesh.visual = trimesh.visual.ColorVisuals(mesh, vertex_colors=np.repeat(rgba, sides, 0))
     mesh.vertex_attributes["_STITCH_ID"] = np.repeat(yarn.stitch_ids, sides).astype(np.float32)
     return mesh
 
 
-def glb_bytes(yarn: YarnPath, sides: int = 8) -> bytes:
+def glb_bytes(yarn: YarnPath, sides: int = 8, rgba: np.ndarray | None = None) -> bytes:
     import trimesh
 
-    return trimesh.exchange.gltf.export_glb(trimesh.Scene(tube_mesh(yarn, sides)))
+    return trimesh.exchange.gltf.export_glb(trimesh.Scene(tube_mesh(yarn, sides, rgba)))
+
+
+def palette(p: Preview) -> list[dict[str, object]]:
+    """The colours the piece uses, in order of first use, each with its hex."""
+    used = list(dict.fromkeys(n.color for n in p.validation.graph.nodes))
+    return colors.resolve(used, p.validation.pattern.palette)
+
+
+def point_colors(p: Preview) -> np.ndarray:
+    """(n, 4) uint8 RGBA per yarn point, from the colour of the stitch it belongs to."""
+    by_ref = {
+        c["ref"]: [int(str(c["hex"])[i : i + 2], 16) for i in (1, 3, 5)] + [255] for c in palette(p)
+    }
+    nodes = p.validation.graph.nodes
+    return np.array([by_ref[nodes[i].color] for i in p.yarn.stitch_ids], dtype=np.uint8)
 
 
 def shape_json(p: Preview) -> dict:
@@ -104,6 +124,7 @@ def shape_json(p: Preview) -> dict:
                 "loop": node.loop,
                 "counting": node.counting,
                 "turning": node.turning,
+                "color": node.color,
                 "parents": node.parents,
                 "position": [round(float(v), 3) for v in p.shape.positions[node.id]],
                 "span": None
@@ -122,4 +143,10 @@ def shape_json(p: Preview) -> dict:
         }
         for r in g.rows
     ]
-    return {"key": p.key, "stats": p.stats, "stitches": stitches, "rows": rows}
+    return {
+        "key": p.key,
+        "stats": p.stats,
+        "palette": palette(p),
+        "stitches": stitches,
+        "rows": rows,
+    }

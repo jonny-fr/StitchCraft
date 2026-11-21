@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTube, decodeYarnBin, pointRangeForRows } from "./yarn";
+import { buildTube, decodeYarnBin, pointRangeForRows, vertexColors } from "./yarn";
 
 function encode(points: number[][], ids: number[]): ArrayBuffer {
   const n = points.length;
@@ -52,5 +52,23 @@ describe("tube geometry", () => {
     const rowOf = new Map([[1, 1], [2, 2]]);
     expect(pointRangeForRows(yarn, rowOf, 1)).toBe(2);
     expect(pointRangeForRows(yarn, rowOf, 2)).toBe(4);
+  });
+});
+
+describe("vertexColors", () => {
+  const yarn = decodeYarnBin(encode([[0, 0, 0], [1, 0, 0], [2, 0, 0]], [3, 3, 4]));
+  const colorOf = new Map([[3, "#ff0000"], [4, "#0000ff"]]);
+
+  it("colours every ring of the tube like the stitch its point belongs to", () => {
+    const c = vertexColors(yarn, 2, colorOf, null, "#00ff00");
+    expect(c.length).toBe(3 * 2 * 3);
+    expect(Array.from(c.slice(0, 3))).toEqual([1, 0, 0]);
+    expect(Array.from(c.slice(15, 18))).toEqual([0, 0, 1]);
+  });
+
+  it("paints the selected stitch in the highlight colour", () => {
+    const c = vertexColors(yarn, 2, colorOf, 4, "#00ff00");
+    expect(Array.from(c.slice(0, 3))).toEqual([1, 0, 0]);
+    expect(Array.from(c.slice(12, 18))).toEqual([0, 1, 0, 0, 1, 0]);
   });
 });

@@ -15,8 +15,10 @@ from functools import cache
 from lark import Lark, Token, Transformer, v_args
 from lark.exceptions import LarkError
 
+from stitchcraft_core import colors
 from stitchcraft_core.expand import MAX_STITCHES
 from stitchcraft_core.ir import (
+    ColorChange,
     Diagnostic,
     Each,
     Instruction,
@@ -35,9 +37,10 @@ from stitchcraft_core.notation.dialect import Dialect, load_dialect, normalise, 
 GRAMMAR = r"""
 start: label? body count? "."?
 
-label: LABEL range lmod? ":"
-     | INT "." LABEL lmod? ":"
+label: LABEL range lmod* ":"
+     | INT "." LABEL lmod* ":"
 lmod: "(" LOOPMOD ")"
+    | "(" COLOR ")"                 -> lcolor
 range: INT ("-" INT)?
 
 body: element ("," element)* ","?
@@ -45,11 +48,12 @@ element: LOOPMOD? item times?       -> element
        | INT X LOOPMOD? item        -> prefix_repeat
        | RING                       -> ring_only
 
-?item: stitch | macro | each | turn | group
+?item: stitch | macro | each | turn | group | colorchange
 stitch: INT? STITCH INT? LOOPMOD? RING?
 macro: INT? MACRO LOOPMOD?
 each: INT? STITCH EACH | EACH INT? STITCH
 turn: TURN
+colorchange: CHANGE COLOR
 group: "(" body ")" | "[" body "]" | "*" body "*"
 times: X INT | INT X
 count: "(" INT ")"
@@ -72,8 +76,11 @@ def _parser(dialect_id: str) -> Lark:
     d = load_dialect(dialect_id)
     terminals = "\n".join(
         f"{name}: /{word_regex(d.words[name], digit_follows=name == 'LABEL')}/i"
-        for name in ("STITCH", "MACRO", "LOOPMOD", "RING", "TURN", "EACH", "LABEL")
+        for name in ("STITCH", "MACRO", "LOOPMOD", "RING", "TURN", "EACH", "LABEL", "CHANGE")
     )
+    # codes are case-sensitive (so "B" is a colour but "b" is not), names and hex are not
+    names = word_regex(list(colors.names()))
+    terminals += f"\nCOLOR: /#[0-9a-fA-F]{{6}}(?!\\w)|(?i:{names})|{colors.CODE}(?!\\w)/"
     return Lark(
         GRAMMAR + terminals,
         parser="earley",
@@ -104,14 +111,16 @@ class _Label:
     first: int
     last: int
     loop: Loop | None
+    color: ColorChange | None
 
 
 @v_args(meta=True)
 class _ToIR(Transformer):
-    def __init__(self, dialect: Dialect, ctx: _LineCtx):
+    def __init__(self, dialect: Dialect, ctx: _LineCtx, refs: list[ColorChange]):
         super().__init__()
         self.d = dialect
         self.ctx = ctx
+        self.refs = refs  # every colour change, for the palette check after parsing
 
     def _span(self, meta) -> SourceSpan | None:
         if getattr(meta, "empty", True):
@@ -141,10 +150,22 @@ class _ToIR(Transformer):
             (int(num), int(num)) if num else next(c for c in children if isinstance(c, tuple))
         )
         loop = next((c for c in children if isinstance(c, Loop)), None)
-        return _Label(self.d.lookup[normalise(tok)][1], first, last, loop)
+        color = next((c for c in children if isinstance(c, ColorChange)), None)
+        return _Label(self.d.lookup[normalise(tok)][1], first, last, loop, color)
 
     def lmod(self, meta, children):
         return self._loop(children[0])
+
+    def lcolor(self, meta, children):
+        return self._color(children[0], meta)
+
+    def colorchange(self, meta, children):
+        return self._color(children[1], meta)
+
+    def _color(self, tok: Token, meta) -> ColorChange:
+        change = ColorChange(colors.ref(str(tok)), self._span(meta))
+        self.refs.append(change)
+        return change
 
     def range(self, meta, children):
         nums = [int(c) for c in children]
@@ -250,21 +271,28 @@ def parse(text: str, dialect: str = "de") -> ParseResult:
         re.IGNORECASE,
     )
     ignored_re = re.compile(r"^\s*" + word_regex(d.words["IGNORED"]), re.IGNORECASE)
+    palette_re = re.compile(r"^\s*" + word_regex(d.words["PALETTE"]) + r"\s*:(.*)$", re.IGNORECASE)
 
     part = Part()
     diags: list[Diagnostic] = []
     offset = 0
     last_number = 0
     last_kind: str | None = None
+    palette: dict[str, str | None] = {}
+    refs: list[ColorChange] = []
+    pending: list[Instruction] = []  # colour change on a line of its own, for the next row
     for lineno, raw in enumerate(text.splitlines(keepends=True), start=1):
         line = raw.rstrip("\r\n")
         ctx = _LineCtx(offset, lineno)
         offset += len(raw)
         if not line.strip():
             continue
+        if m := palette_re.match(line):
+            diags += _palette(m.group(1), palette, ctx.span(0, len(line)))
+            continue
         try:
             tree = parser.parse(line)
-            label, body, count = _ToIR(d, ctx).transform(tree)
+            label, body, count = _ToIR(d, ctx, refs).transform(tree)
         except LarkError as exc:
             col = getattr(exc, "column", None)
             col = col if isinstance(col, int) and col > 0 else 1
@@ -278,6 +306,12 @@ def parse(text: str, dialect: str = "de") -> ParseResult:
             continue
 
         line_span = ctx.span(0, len(line))
+        if label is None and all(isinstance(i, ColorChange) for i in body):
+            pending = body
+            continue
+        if label is not None and label.color is not None:
+            body = [label.color, *body]
+        body, pending = pending + body, []
         into_ring = any(isinstance(i, Stitch) and i.into_ring for i in _walk(body))
         if label is not None:
             kind, first, last = label.kind, label.first, label.last
@@ -302,7 +336,26 @@ def parse(text: str, dialect: str = "de") -> ParseResult:
             part.rows.append(Row(number, kind, instrs, count, line_span))
         last_number, last_kind = last, kind
 
-    return ParseResult(Pattern(dialect=d.id, parts=[part]), diags)
+    if palette:
+        diags += [
+            Diagnostic("W_UNKNOWN_COLOR", "warning", c.span, {"name": c.color})
+            for c in refs
+            if c.color not in palette and colors.known_hex(c.color) is None
+        ]
+    return ParseResult(Pattern(dialect=d.id, parts=[part], palette=palette), diags)
+
+
+def _palette(entries: str, palette: dict[str, str | None], span: SourceSpan) -> list[Diagnostic]:
+    """'A = creme, B = #c0392b' -> palette entries; unknown colour words are warned."""
+    diags = []
+    for entry in filter(str.strip, entries.split(",")):
+        code, _, value = entry.replace(":", "=").partition("=")
+        code, value = code.strip(), value.strip()
+        hex_ = colors.known_hex(value) if value else None
+        palette[code] = hex_
+        if hex_ is None:
+            diags.append(Diagnostic("W_UNKNOWN_COLOR", "warning", span, {"name": value or code}))
+    return diags
 
 
 def _walk(instrs: list[Instruction]):

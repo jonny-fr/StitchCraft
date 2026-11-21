@@ -16,7 +16,6 @@
     "gaugeStitches": "Maschenprobe: Maschen / 10 cm",
     "gaugeRows": "Maschenprobe: Reihen / 10 cm",
     "fill": "Füllung",
-    "color": "Garnfarbe",
     "handedness": "Händigkeit",
     "right": "rechts",
     "left": "links",
@@ -32,11 +31,13 @@
     "snapshot": "PNG speichern",
     "exportGlb": "GLB exportieren",
     "stats": "{{stitches}} Maschen · {{size}} cm · {{yarn}} m Garn · {{ms}} ms",
-    "selected": "Masche {{id}} ({{type}}), Reihe {{row}}",
+    "selected": "Masche {{id}} ({{type}}), Reihe {{row}}, Farbe {{color}}",
     "editorTab": "Anleitung",
     "viewerTab": "3D",
     "error": "Fehler: {{message}}",
-    "invalidParams": "Bitte gültige Werte für Garn, Nadel und Maschenprobe eingeben."
+    "invalidParams": "Bitte gültige Werte für Garn, Nadel und Maschenprobe eingeben.",
+    "colors": "Garnfarben",
+    "colorFallback": "Farbe nicht in der Anleitung festgelegt – frei wählbar"
   },
   "diagnostics": {
     "E_SYNTAX": "Zeile {{line}}: unverständliche Anweisung.",
@@ -46,6 +47,7 @@
     "E_TOO_FEW_PARENTS": "Runde/Reihe {{row}}: braucht {{needed}} Maschen der Vorreihe, vorhanden sind {{available}}.",
     "W_UNWORKED": "Runde/Reihe {{row}}: {{left}} Maschen der Vorreihe bleiben unbehäkelt.",
     "E_EMPTY_PATTERN": "Die Anleitung enthält keine Maschen.",
-    "E_TOO_LARGE": "Die Anleitung ist zu groß für die Vorschau (höchstens {{limit}} Maschen)."
+    "E_TOO_LARGE": "Die Anleitung ist zu groß für die Vorschau (höchstens {{limit}} Maschen).",
+    "W_UNKNOWN_COLOR": "Zeile {{line}}: Farbe „{{name}}“ ist unbekannt, die Vorschau nimmt eine Ersatzfarbe."
   }
 }

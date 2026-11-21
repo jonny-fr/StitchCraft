@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from stitchcraft_core.ir import (
+    ColorChange,
     Each,
     Instruction,
     Loop,
@@ -46,7 +47,12 @@ class TurnOp:
     span: SourceSpan | None = None
 
 
-RowOp = Op | EachOp | TurnOp
+@dataclass
+class ColorOp:
+    color: str
+
+
+RowOp = Op | EachOp | TurnOp | ColorOp
 
 
 def _ops(instr: Instruction) -> list[RowOp]:
@@ -69,6 +75,8 @@ def _ops(instr: Instruction) -> list[RowOp]:
             return [EachOp(t, n, loop, span)]
         case Turn(span=span):
             return [TurnOp(span)]
+        case ColorChange(color=color):
+            return [ColorOp(color)]
         case Repeat(body=body, times=times):
             return [op for _ in range(times) for i in body for op in _ops(i)]
     raise TypeError(f"unknown instruction {instr!r}")
@@ -109,7 +117,7 @@ def expand_row(row: Row) -> list[RowOp]:
 def _mark_turning_chains(ops: list[RowOp]) -> None:
     """Short chain runs at the row start or right before a turn are turning chains."""
     is_ch = [isinstance(o, Op) and o.type == "ch" for o in ops]
-    stitches = [c for c, o in zip(is_ch, ops, strict=True) if not isinstance(o, TurnOp)]
+    stitches = [c for c, o in zip(is_ch, ops, strict=True) if isinstance(o, Op | EachOp)]
     if all(stitches) or not any(stitches):
         return
     runs: list[tuple[int, int]] = []
@@ -124,8 +132,9 @@ def _mark_turning_chains(ops: list[RowOp]) -> None:
         else:
             i += 1
     for start, end in runs:
-        at_start = start == 0
-        before_turn = end == len(ops) or isinstance(ops[end], TurnOp)
+        at_start = all(isinstance(o, ColorOp) for o in ops[:start])
+        after = next((o for o in ops[end:] if not isinstance(o, ColorOp)), None)
+        before_turn = after is None or isinstance(after, TurnOp)
         if (at_start or before_turn) and end - start <= MAX_TURNING_CHAIN:
             for k in range(start, end):
                 op = ops[k]

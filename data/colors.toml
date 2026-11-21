@@ -1,0 +1,23 @@
+# Yarn colours for colour changes: names a pattern may use (any dialect) and the
+# fallback colours for codes it uses without defining them (A, B, MC, CC1, ...).
+version = 1
+
+# in order of first use; the first one is the classic natural cotton
+defaults = ["#efe6d2", "#c0392b", "#2e6fb5", "#3c8d4f", "#e8b923", "#7d4a9e", "#2b2b2b", "#e07a2e"]
+
+[names]
+"#f6f4ef" = ["weiß", "weiss", "white"]
+"#efe6d2" = ["creme", "natur", "cream", "natural", "ecru"]
+"#2b2b2b" = ["schwarz", "black"]
+"#8a8a8a" = ["grau", "grey", "gray"]
+"#c0392b" = ["rot", "red"]
+"#e8a0b4" = ["rosa", "pink"]
+"#e07a2e" = ["orange"]
+"#e8b923" = ["gelb", "yellow"]
+"#3c8d4f" = ["grün", "gruen", "green"]
+"#2e6fb5" = ["blau", "blue"]
+"#9cc7e8" = ["hellblau", "light blue"]
+"#1f2f5c" = ["dunkelblau", "navy"]
+"#7d4a9e" = ["lila", "violett", "purple"]
+"#7a4e2d" = ["braun", "brown"]
+"#d2b48c" = ["beige", "tan"]

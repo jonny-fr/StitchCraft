@@ -40,7 +40,7 @@ def main(argv: list[str] | None = None) -> int:
         sys.stdout.write("\n")
         return 0 if result.ok else 1
     if args.cmd == "preview":
-        from stitchcraft_core.export import encode_yarn_bin, glb_bytes, shape_json
+        from stitchcraft_core.export import encode_yarn_bin, glb_bytes, point_colors, shape_json
         from stitchcraft_core.pipeline import PreviewError, preview
         from stitchcraft_core.serialize import validation_dict
 
@@ -53,7 +53,7 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         args.out.mkdir(parents=True, exist_ok=True)
         (args.out / "yarn.bin").write_bytes(encode_yarn_bin(made.yarn))
-        (args.out / "model.glb").write_bytes(glb_bytes(made.yarn))
+        (args.out / "model.glb").write_bytes(glb_bytes(made.yarn, rgba=point_colors(made)))
         (args.out / "shape.json").write_text(json.dumps(shape_json(made)), encoding="utf-8")
         return 0
     if args.cmd == "gate":

@@ -11,7 +11,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import Response, StreamingResponse
 from stitchcraft_core.data import load_toml
-from stitchcraft_core.export import encode_yarn_bin, glb_bytes, shape_json
+from stitchcraft_core.export import encode_yarn_bin, glb_bytes, point_colors, shape_json
 from stitchcraft_core.notation import parse
 from stitchcraft_core.notation.dialect import available_dialects, load_dialect
 from stitchcraft_core.params import Params
@@ -71,7 +71,8 @@ def create_app(cache_dir: Path | None = None) -> FastAPI:
             raise HTTPException(422, detail) from exc
         target.mkdir(parents=True, exist_ok=True)
         (target / "yarn.bin").write_bytes(encode_yarn_bin(result.yarn))
-        (target / "model.glb").write_bytes(await run_in_threadpool(glb_bytes, result.yarn))
+        glb = await run_in_threadpool(glb_bytes, result.yarn, 8, point_colors(result))
+        (target / "model.glb").write_bytes(glb)
         (target / "shape.json").write_text(json.dumps(shape_json(result)))
         out = {
             "id": key,

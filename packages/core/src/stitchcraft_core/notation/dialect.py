@@ -66,6 +66,8 @@ def load_dialect(dialect_id: str) -> Dialect:
     words["EACH"] = kw["each"]
     words["LABEL"] = kw["round_label"] + kw["row_label"] + kw["row_label_short"]
     words["IGNORED"] = kw["ignored"]
+    words["CHANGE"] = kw["color_change"]
+    words["PALETTE"] = kw["palette"]
     for v in kw["round_label"]:
         lookup[normalise(v)] = ("label", "round")
     for v in kw["row_label"]:

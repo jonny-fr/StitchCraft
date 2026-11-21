@@ -8,8 +8,9 @@ export interface Params {
   yarn_mm: number; hook_mm: number; gauge_stitches: number | null; gauge_rows: number | null;
   fill: number; handedness: "right" | "left"; color: string;
 }
-export interface StitchInfo { id: number; row: number; type: string; op: string | null; span: Span | null; position: number[]; parents: number[] }
-export interface Shape { key: string; stats: Stats; stitches: StitchInfo[]; rows: { number: number; kind: string; stitches: number }[] }
+export interface StitchInfo { id: number; row: number; type: string; op: string | null; color: string; span: Span | null; position: number[]; parents: number[] }
+export interface PaletteColor { ref: string; hex: string; defined: boolean }
+export interface Shape { key: string; stats: Stats; palette: PaletteColor[]; stitches: StitchInfo[]; rows: { number: number; kind: string; stitches: number }[] }
 export interface Stats { stitches: number; rows: number; size_cm: number[]; yarn_length_m: number; timings: Record<string, number> }
 export interface PreviewResult { id: string; yarn: Yarn; shape: Shape }
 

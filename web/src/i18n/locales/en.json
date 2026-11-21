@@ -16,7 +16,6 @@
     "gaugeStitches": "Gauge: stitches / 10 cm",
     "gaugeRows": "Gauge: rows / 10 cm",
     "fill": "Stuffing",
-    "color": "Yarn colour",
     "handedness": "Handedness",
     "right": "right",
     "left": "left",
@@ -32,11 +31,13 @@
     "snapshot": "Save PNG",
     "exportGlb": "Export GLB",
     "stats": "{{stitches}} stitches · {{size}} cm · {{yarn}} m yarn · {{ms}} ms",
-    "selected": "Stitch {{id}} ({{type}}), row {{row}}",
+    "selected": "Stitch {{id}} ({{type}}), row {{row}}, colour {{color}}",
     "editorTab": "Pattern",
     "viewerTab": "3D",
     "error": "Error: {{message}}",
-    "invalidParams": "Please enter valid values for yarn, hook and gauge."
+    "invalidParams": "Please enter valid values for yarn, hook and gauge.",
+    "colors": "Yarn colours",
+    "colorFallback": "Colour not set by the pattern – pick one"
   },
   "diagnostics": {
     "E_SYNTAX": "Line {{line}}: instruction not understood.",
@@ -46,6 +47,7 @@
     "E_TOO_FEW_PARENTS": "Round/row {{row}}: needs {{needed}} stitches of the previous row, only {{available}} there.",
     "W_UNWORKED": "Round/row {{row}}: {{left}} stitches of the previous row stay unworked.",
     "E_EMPTY_PATTERN": "The pattern contains no stitches.",
-    "E_TOO_LARGE": "The pattern is too large to preview (at most {{limit}} stitches)."
+    "E_TOO_LARGE": "The pattern is too large to preview (at most {{limit}} stitches).",
+    "W_UNKNOWN_COLOR": "Line {{line}}: unknown colour “{{name}}”, the preview uses a stand-in."
   }
 }

@@ -1,4 +1,4 @@
-import { BufferAttribute, BufferGeometry } from "three";
+import { BufferAttribute, BufferGeometry, Color } from "three";
 
 export interface Yarn {
   count: number;
@@ -89,6 +89,21 @@ export function buildTube(yarn: Yarn, sides = 8): BufferGeometry {
   g.setIndex(new BufferAttribute(idx, 1));
   g.computeBoundingSphere();
   return g;
+}
+
+/** RGB per tube vertex (linear): the colour of each point's stitch, the selected stitch highlighted. */
+export function vertexColors(
+  yarn: Yarn, sides: number, colorOf: Map<number, string>, selected: number | null, highlight: string,
+): Float32Array {
+  const out = new Float32Array(yarn.count * sides * 3);
+  const cache = new Map<string, Color>();
+  const color = (hex: string) => cache.get(hex) ?? cache.set(hex, new Color(hex)).get(hex)!;
+  for (let i = 0; i < yarn.count; i++) {
+    const id = yarn.stitchIds[i];
+    const c = color(id === selected ? highlight : (colorOf.get(id) ?? "#ffffff"));
+    for (let k = 0; k < sides; k++) out.set([c.r, c.g, c.b], (i * sides + k) * 3);
+  }
+  return out;
 }
 
 /** Number of yarn points up to and including the last stitch of `maxRow` (yarn order). */

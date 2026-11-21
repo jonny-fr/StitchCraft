@@ -8,7 +8,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from stitchcraft_core.expand import MAX_STITCHES, EachOp, Op, TurnOp, expand_row, pattern_size
+from stitchcraft_core.expand import (
+    MAX_STITCHES,
+    ColorOp,
+    EachOp,
+    Op,
+    TurnOp,
+    expand_row,
+    pattern_size,
+)
 from stitchcraft_core.ir import Diagnostic, Pattern, SourceSpan
 
 
@@ -23,6 +31,7 @@ class Node:
     op: str | None = None  # "inc" / "dec" macro the stitch came from
     loop: str = "both"
     span: SourceSpan | None = None
+    color: str = "A"  # colour reference, see stitchcraft_core.colors
 
 
 @dataclass
@@ -81,6 +90,7 @@ def _add_node(
     counting: bool = True,
     turning: bool = False,
     macro: str | None = None,
+    color: str = "A",
 ) -> int:
     node = Node(
         id=len(nodes),
@@ -92,6 +102,7 @@ def _add_node(
         op=macro,
         loop=str(op.loop),
         span=op.span,
+        color=color,
     )
     nodes.append(node)
     return node.id
@@ -110,14 +121,15 @@ def build_graph(pattern: Pattern) -> StitchGraph:
         too_large = Diagnostic("E_TOO_LARGE", "error", params={"limit": MAX_STITCHES})
         return StitchGraph([], [], None, [too_large])
 
+    color = next(iter(pattern.palette), "A")
     if any(isinstance(op, Op) and op.ring for op in expand_row(part.rows[0])):
-        nodes.append(Node(0, -1, "ring", counting=False))
+        nodes.append(Node(0, -1, "ring", counting=False, color=color))
         ring = 0
 
     prev: RowInfo | None = None
     for ri, row in enumerate(part.rows):
         ops = expand_row(row)
-        stitch_ops = [o for o in ops if not isinstance(o, TurnOp)]
+        stitch_ops = [o for o in ops if isinstance(o, Op | EachOp)]
         foundation = bool(stitch_ops) and all(
             isinstance(o, Op) and o.type == "ch" for o in stitch_ops
         )
@@ -144,10 +156,13 @@ def build_graph(pattern: Pattern) -> StitchGraph:
         last_parent: int | None = None
 
         def add(op_type, parents, op, **kw):
-            ids.append(_add_node(nodes, ri, op_type, parents, op, **kw))  # noqa: B023
+            ids.append(_add_node(nodes, ri, op_type, parents, op, color=color, **kw))  # noqa: B023
 
         for op in ops:
             if isinstance(op, TurnOp):
+                continue
+            if isinstance(op, ColorOp):
+                color = op.color
                 continue
             if isinstance(op, EachOp):
                 macro = "inc" if op.count > 1 else None

@@ -67,13 +67,21 @@ class Turn:
 
 
 @dataclass
+class ColorChange:
+    """Work on with yarn ``color``: a palette code ("B", "CC1"), a colour name or "#rrggbb"."""
+
+    color: str
+    span: SourceSpan | None = None
+
+
+@dataclass
 class Repeat:
     body: list[Instruction]
     times: int
     span: SourceSpan | None = None
 
 
-Instruction = Stitch | Macro | Each | Turn | Repeat
+Instruction = Stitch | Macro | Each | Turn | ColorChange | Repeat
 
 
 @dataclass
@@ -94,3 +102,4 @@ class Part:
 class Pattern:
     dialect: str
     parts: list[Part] = field(default_factory=list)
+    palette: dict[str, str | None] = field(default_factory=dict)  # code -> "#rrggbb" if known
