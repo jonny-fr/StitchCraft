@@ -1,0 +1,36 @@
+# Stitch library v1: dimensions relative to the single-crochet gauge cell
+# (width = one sc wide, height = one sc row tall). Versioned: part of the preview cache key.
+version = 1
+
+[gauge_defaults]
+# derived from hook size when no gauge is measured
+width_per_hook_mm = 1.45
+height_per_hook_mm = 1.45
+
+[stitch.sc]
+width = 1.0
+height = 1.0
+
+[stitch.ch]
+width = 1.0
+height = 0.55
+
+[stitch.slst]
+width = 0.85
+height = 0.35
+
+[stitch.hdc]
+width = 1.0
+height = 1.5
+
+[stitch.dc]
+width = 1.0
+height = 2.0
+
+[stitch.tr]
+width = 1.0
+height = 3.0
+
+[stitch.ring]
+width = 0.0
+height = 0.0

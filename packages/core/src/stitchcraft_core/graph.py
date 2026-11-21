@@ -132,6 +132,7 @@ def build_graph(pattern: Pattern) -> StitchGraph:
             needed = sum(o.consume for o in ops if isinstance(o, Op))
             has_each = any(isinstance(o, EachOp) for o in ops)
             if prev.foundation and (has_each or needed == len(available) - 1):
+                nodes[available[0]].turning = True  # "into the 2nd chain from the hook"
                 available = available[1:]
 
         ids: list[int] = []

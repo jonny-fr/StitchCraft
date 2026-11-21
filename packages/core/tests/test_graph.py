@@ -72,6 +72,8 @@ def test_first_chain_from_hook_is_skipped():
     chains = g.rows[0].node_ids
     r2 = counting(g, g.rows[1])
     assert [g.nodes[n].parents[0] for n in r2] == list(reversed(chains))[1:]
+    skipped = g.nodes[chains[-1]]
+    assert skipped.turning and skipped.counting  # acts as turning chain, still counted in row 1
 
 
 def test_turning_chain_is_not_counted_and_not_a_parent():
