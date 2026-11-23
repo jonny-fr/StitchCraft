@@ -78,3 +78,13 @@ def test_sphere_preview_under_five_seconds():
     elapsed = time.perf_counter() - t0
     assert p.stats["stitches"] == 432
     assert elapsed < 5.0, elapsed
+
+
+def test_preview_reports_progress_without_changing_the_result(disc):
+    seen = []
+    again = preview(
+        reference_pattern("2-disc"), "de", Params(), progress=lambda s, f: seen.append((s, f))
+    )
+    assert [s for s, _ in seen] == ["validate", "shape", "yarn"]
+    assert [f for _, f in seen] == sorted(f for _, f in seen)
+    assert again.key == disc.key and again.yarn_hash == disc.yarn_hash

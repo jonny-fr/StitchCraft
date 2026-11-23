@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import time
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 
 import numpy as np
@@ -68,17 +69,31 @@ def cache_key(text: str, dialect: str, params: Params) -> str:
     return hashlib.sha256(blob.encode()).hexdigest()[:32]
 
 
-def preview(text: str, dialect: str, params: Params, key: str | None = None) -> Preview:
+Progress = Callable[[str, float], None]
+
+
+def preview(
+    text: str,
+    dialect: str,
+    params: Params,
+    key: str | None = None,
+    progress: Progress | None = None,
+) -> Preview:
+    """`progress(stage, fraction)` is called as each stage starts; fraction is 0..1 overall."""
+    report = progress or (lambda stage, fraction: None)
     timings = {}
+    report("validate", 0.0)
     t0 = time.perf_counter()
     validation = validate(text, dialect=dialect)
     graph = validation.graph
     if not any(n.counting for n in graph.nodes):
         raise PreviewError(validation)
     timings["validate_ms"] = (time.perf_counter() - t0) * 1000
+    report("shape", 0.05)
     t1 = time.perf_counter()
     shape = relax(graph, params)
     timings["shape_ms"] = (time.perf_counter() - t1) * 1000
+    report("yarn", 0.8)
     t2 = time.perf_counter()
     yarn = build_yarn(graph, shape, params)
     timings["yarn_ms"] = (time.perf_counter() - t2) * 1000

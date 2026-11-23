@@ -39,7 +39,21 @@
     "colors": "Garnfarben",
     "colorFallback": "Farbe nicht in der Anleitung festgelegt – frei wählbar",
     "autoDialect": "automatisch ({{dialect}})",
-    "pickDialect": "US- oder UK-Begriffe?"
+    "pickDialect": "US- oder UK-Begriffe?",
+    "importFile": "Importieren",
+    "exportFile": "Exportieren (.stitch.json)",
+    "importError": {
+      "badJson": "Datei ist kein gültiges JSON.",
+      "notStitchFile": "Das ist keine Stitchcraft-Datei.",
+      "badVersion": "Diese Dateiversion wird nicht unterstützt."
+    },
+    "stage": {
+      "validate": "Prüfe Anleitung",
+      "shape": "Berechne Form",
+      "yarn": "Lege Garn",
+      "export": "Erzeuge Dateien",
+      "done": "Fertig"
+    }
   },
   "diagnostics": {
     "E_SYNTAX": "Zeile {{line}}: unverständliche Anweisung.",
@@ -82,5 +96,31 @@
     "palette": "Farbpalette",
     "glossary": "Abkürzungsverzeichnis",
     "ignored": "Hinweis ohne Einfluss auf die Form"
+  },
+  "params": {
+    "yarnClass": "Garngewicht-Klasse",
+    "custom": "benutzerdefiniert",
+    "classOption": "{{name}} (Garn {{yarn}} mm, Nadel {{hook}} mm)",
+    "classes": {
+      "lace": "Lace (0)",
+      "fingering": "Fingering (1)",
+      "sport": "Sport (2)",
+      "dk": "DK (3)",
+      "worsted": "Worsted (4)",
+      "bulky": "Bulky (5)",
+      "superBulky": "Super Bulky (6)",
+      "jumbo": "Jumbo (7)"
+    },
+    "estimated": "geschätzt",
+    "sideOut": "Außenseite",
+    "rightSide": "rechte Seite außen",
+    "wrongSide": "linke Seite außen",
+    "material": "Material",
+    "materials": {
+      "cotton": "Baumwolle",
+      "acrylic": "Acryl",
+      "mohair": "Mohair"
+    },
+    "color": "Garnfarbe (ohne Festlegung in der Anleitung)"
   }
 }

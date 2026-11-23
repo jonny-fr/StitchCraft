@@ -39,7 +39,21 @@
     "colors": "Yarn colours",
     "colorFallback": "Colour not set by the pattern – pick one",
     "autoDialect": "automatic ({{dialect}})",
-    "pickDialect": "US or UK terms?"
+    "pickDialect": "US or UK terms?",
+    "importFile": "Import",
+    "exportFile": "Export (.stitch.json)",
+    "importError": {
+      "badJson": "The file is not valid JSON.",
+      "notStitchFile": "This is not a Stitchcraft file.",
+      "badVersion": "This file version is not supported."
+    },
+    "stage": {
+      "validate": "Checking pattern",
+      "shape": "Computing shape",
+      "yarn": "Laying yarn",
+      "export": "Writing files",
+      "done": "Done"
+    }
   },
   "diagnostics": {
     "E_SYNTAX": "Line {{line}}: instruction not understood.",
@@ -82,5 +96,31 @@
     "palette": "colour palette",
     "glossary": "abbreviations",
     "ignored": "note without effect on the shape"
+  },
+  "params": {
+    "yarnClass": "Yarn weight class",
+    "custom": "custom",
+    "classOption": "{{name}} (yarn {{yarn}} mm, hook {{hook}} mm)",
+    "classes": {
+      "lace": "Lace (0)",
+      "fingering": "Fingering (1)",
+      "sport": "Sport (2)",
+      "dk": "DK (3)",
+      "worsted": "Worsted (4)",
+      "bulky": "Bulky (5)",
+      "superBulky": "Super Bulky (6)",
+      "jumbo": "Jumbo (7)"
+    },
+    "estimated": "estimated",
+    "sideOut": "Outer side",
+    "rightSide": "right side out",
+    "wrongSide": "wrong side out",
+    "material": "Material",
+    "materials": {
+      "cotton": "Cotton",
+      "acrylic": "Acrylic",
+      "mohair": "Mohair"
+    },
+    "color": "Yarn colour (if the pattern sets none)"
   }
 }

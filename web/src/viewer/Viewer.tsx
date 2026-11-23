@@ -10,7 +10,15 @@ import {
   type BufferGeometry,
   type PerspectiveCamera,
 } from "three";
+import type { Material } from "../api";
 import { buildTube, pointRangeForRows, vertexColors, type Yarn } from "./yarn";
+
+/** Surface look per yarn material; fuzz geometry is a later milestone. */
+export const MATERIAL_LOOK: Record<Material, { roughness: number; sheen: number; sheenRoughness: number; bumpScale: number }> = {
+  cotton: { roughness: 0.85, sheen: 0.6, sheenRoughness: 0.45, bumpScale: 0.6 },
+  acrylic: { roughness: 0.5, sheen: 0.25, sheenRoughness: 0.3, bumpScale: 0.4 },
+  mohair: { roughness: 1, sheen: 1, sheenRoughness: 0.9, bumpScale: 0.9 },
+};
 
 export type View = "front" | "side" | "top" | "iso";
 type Controls = { target: Vector3; update(): void };
@@ -31,6 +39,7 @@ interface Props {
   silhouette: boolean;
   view: View;
   rounds: boolean;
+  material: Material;
   showFps: boolean;
 }
 
@@ -91,11 +100,12 @@ function CameraRig({ radius, view, rounds }: { radius: number; view: View; round
   return null;
 }
 
-function YarnMesh({ geometry, yarn, colorOf, silhouette, selected, onSelect, drawCount, centre }: {
-  geometry: BufferGeometry; yarn: Yarn; colorOf: Map<number, string>; silhouette: boolean; selected: number | null;
+function YarnMesh({ geometry, material, yarn, colorOf, silhouette, selected, onSelect, drawCount, centre }: {
+  geometry: BufferGeometry; material: Material; yarn: Yarn; colorOf: Map<number, string>; silhouette: boolean; selected: number | null;
   onSelect(id: number): void; drawCount: number; centre: Vector3;
 }) {
   const ply = useMemo(plyTexture, []);
+  const look = MATERIAL_LOOK[material];
   useEffect(() => {
     geometry.setDrawRange(0, drawCount);
   }, [geometry, drawCount]);
@@ -121,12 +131,12 @@ function YarnMesh({ geometry, yarn, colorOf, silhouette, selected, onSelect, dra
       ) : (
         <meshPhysicalMaterial
           vertexColors
-          roughness={0.85}
-          sheen={0.6}
-          sheenRoughness={0.45}
+          roughness={look.roughness}
+          sheen={look.sheen}
+          sheenRoughness={look.sheenRoughness}
           sheenColor="#d8d8d8"
           bumpMap={ply}
-          bumpScale={0.6}
+          bumpScale={look.bumpScale}
         />
       )}
     </mesh>
@@ -134,7 +144,7 @@ function YarnMesh({ geometry, yarn, colorOf, silhouette, selected, onSelect, dra
 }
 
 export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer(props, ref) {
-  const { yarn, rowOf, maxRow, colorOf, selected, onSelect, silhouette, view, rounds, showFps } = props;
+  const { yarn, rowOf, maxRow, colorOf, selected, onSelect, silhouette, view, rounds, material, showFps } = props;
   const canvas = useRef<HTMLCanvasElement>(null);
   useImperativeHandle(ref, () => ({ snapshot: () => canvas.current?.toDataURL("image/png") ?? "" }));
 
@@ -173,6 +183,7 @@ export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer(props, ref
       )}
       <YarnMesh
         geometry={geometry}
+        material={material}
         yarn={yarn}
         colorOf={colorOf}
         silhouette={silhouette}

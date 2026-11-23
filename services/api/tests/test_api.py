@@ -1,3 +1,6 @@
+import json
+import time
+
 import pytest
 from fastapi.testclient import TestClient
 from stitchcraft_api.app import create_app
@@ -42,20 +45,95 @@ def test_parse_returns_ir(client):
     assert row["number"] == 2 and row["expected_count"] == 12
 
 
-def test_preview_lifecycle_and_cache(client, tmp_path):
-    body = {"text": "6 fM in MR (6)\n6x zun (12)", "dialect": "de", "params": {"fill": 0.5}}
-    r = client.post("/api/v1/previews", json=body)
-    assert r.status_code == 200
-    first = r.json()
-    assert first["status"] == "done" and first["stats"]["stitches"] == 18
+BODY = {"text": "6 fM in MR (6)\n6x zun (12)", "dialect": "de", "params": {"fill": 0.5}}
+
+
+def sse(text):
+    events = []
+    for block in text.strip().split("\n\n"):
+        name, data = block.split("\n")
+        events.append((name.removeprefix("event: "), json.loads(data.removeprefix("data: "))))
+    return events
+
+
+def test_preview_runs_in_background_and_streams_progress(client):
+    first = client.post("/api/v1/previews", json=BODY).json()
+    assert first["status"] == "running" and first["cached"] is False
     pid = first["id"]
+    events = sse(client.get(f"/api/v1/previews/{pid}/events").text)
+    names = [n for n, _ in events]
+    assert names[-1] == "done" and events[-1][1] == {"id": pid}
+    stages = [d["stage"] for n, d in events if n == "progress"]
+    assert stages[:3] == ["validate", "shape", "yarn"] and "export" in stages
+    fractions = [d["fraction"] for n, d in events if n == "progress"]
+    assert fractions == sorted(fractions) and fractions[-1] == 1.0
     assert client.get(f"/api/v1/previews/{pid}/yarn.bin").content[:4] == b"SCYN"
     assert client.get(f"/api/v1/previews/{pid}/model.glb").content[:4] == b"glTF"
     assert client.get(f"/api/v1/previews/{pid}/shape.json").json()["key"] == pid
-    events = client.get(f"/api/v1/previews/{pid}/events").text
-    assert "event: done" in events
-    again = client.post("/api/v1/previews", json=body).json()
-    assert again["id"] == pid and again["cached"] is True
+
+
+def test_cached_preview_is_done_immediately(client):
+    pid = client.post("/api/v1/previews", json=BODY).json()["id"]
+    client.get(f"/api/v1/previews/{pid}/events")  # wait for the job
+    again = client.post("/api/v1/previews", json=BODY).json()
+    assert again["id"] == pid and again["cached"] is True and again["status"] == "done"
+    assert again["stats"]["stitches"] == 18
+    assert [n for n, _ in sse(client.get(f"/api/v1/previews/{pid}/events").text)] == [
+        "progress",
+        "done",
+    ]
+
+
+def test_files_are_404_until_the_preview_is_done(client, monkeypatch):
+    import stitchcraft_api.app as app_module
+
+    real = app_module.preview
+
+    def slow(*args, **kwargs):
+        time.sleep(0.3)
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(app_module, "preview", slow)
+    pid = client.post("/api/v1/previews", json=BODY).json()["id"]
+    assert client.get(f"/api/v1/previews/{pid}/yarn.bin").status_code == 404
+    client.get(f"/api/v1/previews/{pid}/events")
+    assert client.get(f"/api/v1/previews/{pid}/yarn.bin").status_code == 200
+
+
+def test_duplicate_post_starts_no_second_job(client, monkeypatch):
+    import stitchcraft_api.app as app_module
+
+    real = app_module.preview
+    calls = []
+
+    def counting(*args, **kwargs):
+        calls.append(1)
+        time.sleep(0.3)
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(app_module, "preview", counting)
+    a = client.post("/api/v1/previews", json=BODY).json()
+    b = client.post("/api/v1/previews", json=BODY).json()
+    assert a["id"] == b["id"] and b["status"] == "running"
+    client.get(f"/api/v1/previews/{a['id']}/events")
+    assert len(calls) == 1
+
+
+def test_job_failure_is_an_error_event(client, monkeypatch):
+    import stitchcraft_api.app as app_module
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("solver exploded")
+
+    monkeypatch.setattr(app_module, "preview", boom)
+    pid = client.post("/api/v1/previews", json=BODY).json()["id"]
+    events = sse(client.get(f"/api/v1/previews/{pid}/events").text)
+    assert events[-1] == ("error", {"message": "solver exploded"})
+    assert client.get(f"/api/v1/previews/{pid}/yarn.bin").status_code == 404
+
+
+def test_unknown_preview_events_is_404(client):
+    assert client.get("/api/v1/previews/deadbeef/events").status_code == 404
 
 
 def test_preview_without_stitches_is_422(client):
@@ -77,6 +155,7 @@ def test_too_large_preview_is_422_with_diagnostic(client):
 def test_colour_change_reuses_cached_preview(client):
     body = {"text": "6 fM in MR (6)\n6x zun (12)", "dialect": "de"}
     first = client.post("/api/v1/previews", json={**body, "params": {"color": "#ff0000"}}).json()
+    client.get(f"/api/v1/previews/{first['id']}/events")
     again = client.post("/api/v1/previews", json={**body, "params": {"color": "#00ff00"}}).json()
     assert again["id"] == first["id"] and again["cached"] is True
 

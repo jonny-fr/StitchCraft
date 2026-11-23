@@ -66,8 +66,8 @@ und sind im Viewer frei wählbar; das ändert nur die Darstellung, nicht die Sim
 - Garn durchdringt sich bei Zu-/Abnahmen noch stellenweise (Kriterium A5, siehe Protokoll).
 - Ein Teil pro Anleitung; kein Tapestry/Intarsien, keine Prosa-Farbwechsel
   („am Ende der Runde auf creme wechseln“).
-- Der Fortschritts-Endpoint `/previews/{id}/events` meldet bisher nur „fertig“; die Vorschau
-  wird synchron berechnet.
+- Der Fortschritt (`/previews/{id}/events`, SSE) meldet die Stufen validate, shape, yarn und export;
+  die Formrelaxation selbst meldet keine Zwischenstände.
 
 ## Kommandozeile
 
