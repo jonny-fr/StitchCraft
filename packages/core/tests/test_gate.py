@@ -1,6 +1,6 @@
 import pytest
-from conftest import REFERENCE_DIR
-from stitchcraft_core.gate import measure, write_report
+from conftest import CORPUS_DIR, REFERENCE_DIR
+from stitchcraft_core.gate import M5_EXTRA, M5_PIECE, measure, measure_m5, write_report
 
 pytestmark = pytest.mark.slow
 
@@ -27,3 +27,25 @@ def test_report_carries_recorded_decision(tmp_path):
     text = write_report(REFERENCE_DIR, out)
     assert "Go ohne Fotos (2026-11-21)." in text
     assert "Entscheidung erst" not in text
+
+
+@pytest.fixture(scope="module")
+def m5_report(tmp_path_factory):
+    out = tmp_path_factory.mktemp("eval") / "m5.md"
+    (out.parent / "m5-notes.md").write_text("V-Köpfe erkennbar.\n", encoding="utf-8")
+    return write_report(REFERENCE_DIR, out, "m5", CORPUS_DIR)
+
+
+def test_m5_gate_passes_for_tall_stitches():
+    m = measure_m5(REFERENCE_DIR)
+    assert set(m) == {"A3", "A4", "A5", "A7", "A8", "A9"}
+    assert all(v["status"] == "pass" for v in m.values()), m
+    assert set(m["A5"]["value"]) == {M5_PIECE, *M5_EXTRA}
+
+
+def test_m5_report_has_corpus_table_and_notes(m5_report):
+    assert m5_report.startswith("# M5-Abnahme")
+    assert "| A7 | pass |" in m5_report
+    assert "| en-UK/10-tr2tog |" in m5_report
+    assert "| de/04-quadrat |" not in m5_report  # sc only
+    assert "## Sichtprüfung" in m5_report and "V-Köpfe erkennbar." in m5_report

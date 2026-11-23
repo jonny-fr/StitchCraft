@@ -75,6 +75,7 @@ und sind im Viewer frei wählbar; das ändert nur die Darstellung, nicht die Sim
 uv run stitchcraft validate tests/reference/3-sphere/pattern.txt
 uv run stitchcraft preview  tests/reference/3-sphere/pattern.txt --out /tmp/kugel
 uv run stitchcraft gate     # misst A1–A9 und schreibt docs/evaluation/m1.md
+uv run stitchcraft gate --milestone m5   # Stäbchen-Gate (Stück 6 u. a.), docs/evaluation/m5.md
 ```
 
 ## MCP-Server
@@ -97,7 +98,7 @@ docker compose --profile snapshot up -d         # zusätzlich der PNG-Renderer (
 
 ```sh
 uv run pytest                     # Kern + API + MCP (A3–A5, A7–A9 automatisiert)
-uv run pytest -m reference        # A1/A2 gegen Fotos in tests/reference (übersprungen ohne Fotos)
+uv run pytest -m reference        # A1/A2 gegen Fotos (übersprungen ohne Fotos), M5-Kriterien für Stück 6
 cd web && pnpm test && pnpm typecheck && pnpm e2e
 cd services/snapshot && npm ci && npm test    # Renderer; echter Chromium-Lauf: SNAPSHOT_REAL=1 SNAPSHOT_KEY=<id> STITCHCRAFT_WEB_URL=…
 ```
@@ -113,7 +114,7 @@ services/mcp/    MCP-Server (FastMCP/MCPServer; stdio + Streamable HTTP)
 services/snapshot/  Playwright-Renderer: PNG aus der Viewer-Seite (`/?snapshot=<key>`), Compose-Profil `snapshot`
 web/             React + react-three-fiber Viewer
 data/            Dialekt-Vokabular, Maschenbibliothek, Garnvorlagen (versioniert)
-tests/reference/ Referenzstücke für das M1-Gate (Fotos/Masken ergänzen, siehe README dort)
+tests/reference/ Referenzstücke für die Gates M1 und M5 (Fotos/Masken ergänzen, siehe README dort)
 ```
 
 Commits enthalten keine Co-Autor-Trailer (pre-commit-Hook `no-coauthor-trailer`).

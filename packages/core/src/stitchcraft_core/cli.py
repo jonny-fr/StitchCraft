@@ -26,9 +26,11 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--hook-mm", type=float, default=Params.hook_mm)
     p.add_argument("--yarn-mm", type=float, default=Params.yarn_mm)
 
-    g = sub.add_parser("gate", help="run the M1 acceptance measurements and write the report")
+    g = sub.add_parser("gate", help="run the acceptance measurements and write the report")
+    g.add_argument("--milestone", choices=["m1", "m5"], default="m1")
     g.add_argument("--reference", type=Path, default=Path("tests/reference"))
-    g.add_argument("--report", type=Path, default=Path("docs/evaluation/m1.md"))
+    g.add_argument("--corpus", type=Path, default=Path("tests/corpus"))
+    g.add_argument("--report", type=Path, help="default: docs/evaluation/<milestone>.md")
 
     args = ap.parse_args(argv)
     if args.cmd == "validate":
@@ -59,7 +61,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "gate":
         from stitchcraft_core.gate import write_report
 
-        report = write_report(args.reference, args.report)
+        out = args.report or Path("docs/evaluation") / f"{args.milestone}.md"
+        report = write_report(args.reference, out, args.milestone, args.corpus)
         print(report)
         return 0
     return 2

@@ -1,4 +1,4 @@
-# Referenzstücke (M1-Gate)
+# Referenzstücke (Gates M1 und M5)
 
 Jedes Unterverzeichnis enthält die Anleitung (`pattern.txt`) und Metadaten (`metadata.toml`).
 Für die Abnahme A1/A2 kommen dazu (Foto-Protokoll, Plan §9):
@@ -26,3 +26,8 @@ mm_per_px = 0.12   # Maßstab der Masken (vom Lineal abgelesen)
 ```
 
 Fehlen diese Dateien, überspringt `pytest -m reference` die Kriterien A1/A2.
+
+Stück 6 (`6-dc-square`, M5) liegt zusätzlich in US- und UK-Begriffen vor (`pattern.en-US.txt`,
+`pattern.en-UK.txt`); welche Datei welcher Dialekt ist, steht in `metadata.toml` unter
+`[dialects]`, weil „ch“/„tr“ allein US und UK nicht unterscheiden. Alle drei Fassungen müssen
+denselben Graphen und denselben Garnpfad liefern (`uv run pytest -m reference`).
