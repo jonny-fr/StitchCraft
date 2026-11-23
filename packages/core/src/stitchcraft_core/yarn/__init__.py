@@ -58,12 +58,16 @@ def build_yarn(g: StitchGraph, shape: Shape, params: Params) -> YarnPath:
 # --- control points -------------------------------------------------------------------------
 
 
+TALL_STITCHES = ("hdc", "dc", "tr")
+
+
 def _template_name(node) -> str:
     if node.type in ("ch", "slst"):
         return node.type
+    tall = node.type in TALL_STITCHES
     if node.op == "dec":
-        return "dec"
-    return "sc"  # hdc/dc/tr templates follow in M5; until then they use the sc shape stretched
+        return f"{node.type}_dec" if tall else "dec"
+    return node.type if tall else "sc"
 
 
 def _local_width(g: StitchGraph, shape: Shape, order: list[int], k: int) -> float:

@@ -35,6 +35,7 @@ HINGE_COMPLIANCE = 5e-3
 HINGE_ANGLE = np.radians(90.0)
 VOLUME_COMPLIANCE = 1e-2
 RING_RADIUS = 1.0  # x row height: centre of the magic ring to the top of round 1
+TURNING_CHAIN_OFFSET = 0.9  # x stitch width: a stacked turning chain stands outside the edge
 
 
 @dataclass
@@ -274,15 +275,38 @@ def _excluded_pairs(n: int, edges: set[tuple[int, int]]) -> np.ndarray:
 def _place_turning_chains(g: StitchGraph, x: np.ndarray) -> None:
     order = [n for n in range(len(g.nodes)) if g.nodes[n].type != "ring"]
     real = [n for n in order if not g.nodes[n].turning]
-    for n in order:
-        if not g.nodes[n].turning:
+    runs: list[list[int]] = []
+    for k, n in enumerate(order):
+        if g.nodes[n].turning:
+            if k and g.nodes[order[k - 1]].turning:
+                runs[-1].append(n)
+            else:
+                runs.append([n])
+    for run in runs:
+        before = [m for m in real if m < run[0]]
+        after = [m for m in real if m > run[-1]]
+        if len(run) > 1 and before and after:
+            _stack_turning_chain(g, x, run, before[-1], after)
             continue
-        before = [m for m in real if m < n]
-        after = [m for m in real if m > n]
-        if before and after:
-            x[n] = 0.5 * (x[before[-1]] + x[after[0]])
-        elif before:
-            x[n] = x[before[-1]]
+        for n in run:
+            if before and after:
+                x[n] = 0.5 * (x[before[-1]] + x[after[0]])
+            elif before:
+                x[n] = x[before[-1]]
+
+
+def _stack_turning_chain(g: StitchGraph, x, run: list[int], below: int, after: list[int]):
+    """A turning chain of several stitches climbs the edge from the last stitch to the
+    first of the next row, standing beside that stitch on the outside, not on its post."""
+    first = after[0]
+    climb = x[first] - x[below]
+    out = np.zeros(3)
+    if len(after) > 1 and g.nodes[after[1]].row == g.nodes[first].row:
+        step = x[first] - x[after[1]]  # one stitch width, pointing out of the edge
+        side = step - (step @ climb) / max(climb @ climb, 1e-12) * climb
+        out = TURNING_CHAIN_OFFSET * np.linalg.norm(step) * side / max(np.linalg.norm(side), 1e-9)
+    for j, n in enumerate(run, start=1):
+        x[n] = x[below] + j / (len(run) + 1) * climb + out
 
 
 def _any_perpendicular(a: np.ndarray) -> np.ndarray:

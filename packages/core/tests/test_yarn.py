@@ -92,3 +92,93 @@ def test_segment_distance_cases():
     p2 = np.array([[0.5, -1, 1], [2, 0, 0], [0, 1, 0]])  # crossing above, collinear gap, parallel
     q2 = np.array([[0.5, 1, 1], [3, 0, 0], [1, 1, 0]])
     assert np.allclose(segment_distances(p1, q1, p2, q2), [1.0, 1.0, 1.0])
+
+
+TALL = ["hdc", "dc", "tr"]
+
+
+@pytest.mark.parametrize("stitch", TALL)
+@pytest.mark.parametrize("loop", ["both", "blo", "flo"])
+def test_tall_stitch_templates_load(stitch, loop):
+    from stitchcraft_core.yarn.templates import template_for
+
+    tpl = template_for(stitch, loop)
+    assert np.allclose(tpl.points[0], [-0.5, 1.0, 0.0])
+    assert np.allclose(tpl.points[-1], [0.5, 1.0, 0.0])
+    assert not np.array_equal(tpl.points, template_for("sc", loop).points)
+    if loop != "both":
+        assert not np.array_equal(tpl.points, template_for(stitch, "both").points)
+
+
+@pytest.mark.parametrize("stitch", TALL)
+def test_tall_decrease_templates_pass_through_both_parents(stitch):
+    from stitchcraft_core.yarn.templates import template_for
+
+    tpl = template_for(f"{stitch}_dec")
+    assert {0, 1, 2} <= set(tpl.anchors.tolist())
+    assert not np.array_equal(tpl.points, template_for("dec").points)
+    assert not np.array_equal(tpl.points, template_for(stitch).points)
+
+
+@pytest.mark.parametrize(
+    ("stitch", "op", "name"),
+    [
+        ("sc", None, "sc"),
+        ("sc", "inc", "sc"),
+        ("sc", "dec", "dec"),
+        ("hdc", None, "hdc"),
+        ("dc", "inc", "dc"),
+        ("tr", None, "tr"),
+        ("hdc", "dec", "hdc_dec"),
+        ("dc", "dec", "dc_dec"),
+        ("tr", "dec", "tr_dec"),
+        ("ch", None, "ch"),
+        ("slst", None, "slst"),
+    ],
+)
+def test_template_name(stitch, op, name):
+    from stitchcraft_core.graph import Node
+    from stitchcraft_core.yarn import _template_name
+
+    assert _template_name(Node(id=0, row=0, type=stitch, op=op)) == name
+
+
+def _turns_around_post(stitch: str, loop: str) -> float:
+    """Signed turns of the centre line around the post axis (u = n = 0), seen from the top,
+    with u converted from stitch widths to yarn radii like n."""
+    from stitchcraft_core.yarn.templates import template_for
+
+    width_r = P.stitch_width_mm / P.yarn_radius_mm
+    pts = template_for(stitch, loop).points
+    angle = np.arctan2(pts[:, 2], pts[:, 0] * width_r)
+    step = (np.diff(angle) + np.pi) % (2 * np.pi) - np.pi
+    return float(step.sum() / (2 * np.pi))
+
+
+@pytest.mark.parametrize(("stitch", "wraps"), [("sc", 0), ("hdc", 1), ("dc", 1), ("tr", 2)])
+@pytest.mark.parametrize("loop", ["both", "blo", "flo"])
+def test_yarn_overs_wrap_around_the_post(stitch, wraps, loop):
+    """Each yarn-over is one full turn around the post. From junction to junction the
+    centre line of an sc turns half a turn (in at the left, across the front, out at the
+    right); every wrap adds one turn in the same sense."""
+    turns = _turns_around_post(stitch, loop)
+    assert abs(turns) == pytest.approx(0.5 + wraps, abs=1e-6)
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("piece", ["hstb-quadrat", "dstb-quadrat", "stb-scheibe", "stb-abnahmen"])
+def test_tall_stitch_pieces_continuous_and_without_penetration(piece):
+    """A4 and A5 for the hdc/tr squares, dc rounds from a magic ring and dc2tog."""
+    from stitchcraft_core.gate import M5_EXTRA
+
+    g = validate(M5_EXTRA[piece], dialect="de").graph
+    assert {n.type for n in g.nodes} & {"hdc", "dc", "tr"}
+    y = build_yarn(g, relax(g, P), P)
+    steps = np.linalg.norm(np.diff(y.points, axis=0), axis=1)
+    boundaries = np.flatnonzero(np.diff(y.stitch_ids) != 0)
+    inner = boundaries[(boundaries > 0) & (boundaries < len(steps) - 1)]
+    gap = (steps[inner] - np.maximum(steps[inner - 1], steps[inner + 1])).max()
+    assert gap <= 0.05 * P.yarn_radius_mm
+    stats = penetration_stats(y)
+    assert stats.max_depth <= 0.10 * P.yarn_radius_mm, stats
+    assert stats.affected_fraction <= 0.01, stats

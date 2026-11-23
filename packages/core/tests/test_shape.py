@@ -149,3 +149,25 @@ def test_normals_point_outward_on_sphere(shapes):
     centre = s.positions[ids].mean(0)
     outward = np.einsum("ij,ij->i", s.normals[ids], s.positions[ids] - centre)
     assert (outward > 0).mean() > 0.95
+
+
+def test_turning_chain_of_several_stitches_climbs_beside_the_edge():
+    """A non-counting ch 3 at the row start rises from the last stitch of the row below to
+    the first stitch of the new row, one above the other, outside that stitch's post."""
+    g = validate("R 1: 11 Lm, wenden\nR 2-3: 3 Lm, 10 Stb, wenden (10)\n").graph
+    shape = relax(g, P)
+    x = shape.positions
+    row = g.rows[2]
+    chain = [n for n in row.node_ids if g.nodes[n].turning]
+    first, second = g.counting_ids(row)[:2]
+    below = g.rows[1].node_ids[-1]
+    assert len(chain) == 3
+    climb = x[first] - x[below]
+    heights = [(x[n] - x[below]) @ climb / (climb @ climb) for n in chain]
+    assert heights == sorted(heights) and heights[0] > 0 and heights[-1] < 1
+    outward = (x[first] - x[second]) / np.linalg.norm(x[first] - x[second])
+    post = x[first] - x[below]
+    for n in chain:
+        rel = x[n] - x[below]
+        off_post = rel - (rel @ post) / (post @ post) * post
+        assert off_post @ outward > 0.5 * P.stitch_width_mm
