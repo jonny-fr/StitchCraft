@@ -1,6 +1,8 @@
 # docker compose up  ->  UI http://localhost:8080, API :8000, MCP (Streamable HTTP) http://localhost:8765/mcp
 # MCP over stdio (Claude Code/Desktop):  docker compose run --rm -i mcp stdio
-# api and mcp share one image and the `cache` volume. The snapshot renderer follows in M4 (task 10).
+# api and mcp share one image and the `cache` volume.
+# PNG snapshots for render_preview need the optional renderer:  docker compose --profile snapshot up -d
+# (Chromium with software WebGL; slow on Apple Silicon, so it is off by default and mcp degrades to GLB + stats)
 services:
   api:
     image: stitchcraft-server
@@ -24,6 +26,8 @@ services:
     command: ["http", "--host", "0.0.0.0"]  # `run --rm -i mcp stdio` replaces this
     ports:
       - "8765:8765"
+    environment:
+      STITCHCRAFT_SNAPSHOT_URL: http://snapshot:8770  # unreachable unless the `snapshot` profile runs
     volumes:
       - cache:/cache
     healthcheck:
@@ -41,6 +45,18 @@ services:
     depends_on:
       api:
         condition: service_healthy
+
+  snapshot:
+    profiles: [snapshot]
+    build: services/snapshot
+    depends_on:
+      web:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8770/health').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   cache:
