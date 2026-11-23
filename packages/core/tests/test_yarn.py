@@ -182,3 +182,40 @@ def test_tall_stitch_pieces_continuous_and_without_penetration(piece):
     stats = penetration_stats(y)
     assert stats.max_depth <= 0.10 * P.yarn_radius_mm, stats
     assert stats.affected_fraction <= 0.01, stats
+
+
+GENERATED = [f"{s}.{loop}" for s in TALL for loop in ("both", "blo", "flo")] + [
+    f"{s}_dec.both" for s in TALL
+]
+
+
+@pytest.mark.parametrize("name", GENERATED)
+def test_tall_stitch_legs_run_straight_up_or_down(name):
+    """Every leg of a tall stitch only climbs or only descends: down from the junction to
+    the first pass through the parent, up to the top of the front loop, down to the second
+    pass, up to the next junction. A leg that doubles back would be a hairpin in the post."""
+    from stitchcraft_core.yarn.templates import template_for
+
+    v = template_for(*name.split(".")).points[:, 1]
+    below = np.flatnonzero(v < 0)
+    split = np.flatnonzero(np.diff(below) > 1)[0]
+    first, second = below[: split + 1], below[split + 1 :]
+    top = 1 + int(np.argmax(v[1:-1]))
+    legs = [
+        (v[: first[0]], -1),
+        (v[first[-1] + 1 : top + 1], 1),
+        (v[top : second[0]], -1),
+        (v[second[-1] + 1 :], 1),
+    ]
+    for leg, sign in legs:
+        assert (sign * np.diff(leg) >= -1e-9).all(), (name, leg)
+
+
+def test_tall_stitch_templates_are_the_generator_output():
+    """templates.toml carries the generated section verbatim: calibrate in design.py."""
+    from stitchcraft_core.data import data_dir
+    from stitchcraft_core.yarn import design
+
+    text = (data_dir() / "stitches" / "templates.toml").read_text(encoding="utf-8")
+    assert design.MARK in text
+    assert design.MARK + text.split(design.MARK, 1)[1] == design.section()
