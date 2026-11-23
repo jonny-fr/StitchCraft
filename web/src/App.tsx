@@ -3,10 +3,11 @@ import { useTranslation } from "react-i18next";
 import { PatternEditor, type EditorHandle } from "./editor/PatternEditor";
 import type { Word } from "./editor/language";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
-import { ApiError, defaultParams, fetchVocabulary, paramsValid, requestPreview, validate, type Diagnostic, type PaletteColor, type Params, type PreviewResult, type Progress, type Validation } from "./api";
+import { ApiError, fetchVocabulary, paramsValid, requestPreview, validate, type Diagnostic, type PaletteColor, type Params, type PreviewResult, type Progress, type Validation } from "./api";
 import { ParamsPanel } from "./params/ParamsPanel";
 import { parseStitchFile, serializeStitchFile, stitchFileName } from "./stitchFile";
 import { samples } from "./samples";
+import { KEYS, loadColors, loadDialect, loadParams, loadString, save } from "./storage";
 import { Viewer, type View, type ViewerHandle } from "./viewer/Viewer";
 
 const DIALECTS = [
@@ -15,23 +16,6 @@ const DIALECTS = [
   { id: "en-US", label: "English (US)" },
   { id: "en-UK", label: "English (UK)" },
 ];
-
-function load<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function save(key: string, value: unknown) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    /* storage unavailable: keep working without persistence */
-  }
-}
 
 const NARROW = "(max-width: 768px)";
 
@@ -48,14 +32,11 @@ function useNarrow(): boolean {
 
 export default function App() {
   const { t, i18n } = useTranslation();
-  const [text, setText] = useState(() => load("stitchcraft.text", samples.find((s) => s.id === "3-sphere")?.text ?? ""));
-  const [dialect, setDialect] = useState(() => load("stitchcraft.dialect", "de"));
-  const [params, setParams] = useState<Params>(() => {
-    const stored = { ...defaultParams, ...load("stitchcraft.params", {}) };
-    return paramsValid(stored) ? stored : defaultParams;
-  });
+  const [text, setText] = useState(() => loadString(KEYS.text, samples.find((s) => s.id === "3-sphere")?.text ?? ""));
+  const [dialect, setDialect] = useState(() => loadDialect());
+  const [params, setParams] = useState<Params>(loadParams);
   // colours picked in the viewer, keyed by code and the colour the pattern gave it
-  const [colorPicks, setColorPicks] = useState<Record<string, string>>(() => load("stitchcraft.colors", {}));
+  const [colorPicks, setColorPicks] = useState<Record<string, string>>(loadColors);
   const [validation, setValidation] = useState<Validation | null>(null);
   const [result, setResult] = useState<PreviewResult | null>(null);
   const [busy, setBusy] = useState(false);
@@ -75,10 +56,10 @@ export default function App() {
   const viewer = useRef<ViewerHandle>(null);
   const showFps = new URLSearchParams(location.search).has("fps");
 
-  useEffect(() => save("stitchcraft.text", text), [text]);
-  useEffect(() => save("stitchcraft.dialect", dialect), [dialect]);
-  useEffect(() => save("stitchcraft.params", params), [params]);
-  useEffect(() => save("stitchcraft.colors", colorPicks), [colorPicks]);
+  useEffect(() => save(KEYS.text, text), [text]);
+  useEffect(() => save(KEYS.dialect, dialect), [dialect]);
+  useEffect(() => save(KEYS.params, params), [params]);
+  useEffect(() => save(KEYS.colors, colorPicks), [colorPicks]);
   useEffect(() => () => void (overlay && URL.revokeObjectURL(overlay)), [overlay]);
 
   // live lint, debounced
@@ -348,7 +329,7 @@ export default function App() {
           {t("app.uiLanguage")}{" "}
           <select
             value={i18n.language.slice(0, 2)}
-            onChange={(e) => (void i18n.changeLanguage(e.target.value), save("stitchcraft.lang", e.target.value))}
+            onChange={(e) => (void i18n.changeLanguage(e.target.value), save(KEYS.lang, e.target.value))}
           >
             <option value="de">Deutsch</option>
             <option value="en">English</option>

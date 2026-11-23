@@ -25,6 +25,24 @@ class SourceSpan:
     col: int  # 1-based
 
 
+# Every code the core emits; the UI catalogs (web/src/i18n/locales) must translate each one.
+DIAGNOSTIC_CODES = frozenset(
+    {
+        "E_COUNT_MISMATCH",
+        "E_EMPTY_PATTERN",
+        "E_SYNTAX",
+        "E_TOO_FEW_PARENTS",
+        "E_TOO_LARGE",
+        "I_IGNORED",
+        "W_AMBIGUOUS_DIALECT",
+        "W_GLOSSARY_UNKNOWN",
+        "W_PROSE",
+        "W_UNKNOWN_COLOR",
+        "W_UNWORKED",
+    }
+)
+
+
 @dataclass(frozen=True)
 class Diagnostic:
     code: str
