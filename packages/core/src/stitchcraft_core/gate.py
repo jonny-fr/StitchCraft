@@ -247,8 +247,23 @@ def flat_rms(p: Preview) -> float:
     return rms / main_dimensions(p, "flat")["width"]
 
 
+A9_RUNS = 3  # latency = median of this many previews, measured before the batch work
+
+
+def _latency(text: str) -> float:
+    runs = []
+    for _ in range(A9_RUNS):
+        t0 = time.perf_counter()
+        preview(text, "de", Params())
+        runs.append(time.perf_counter() - t0)
+    return float(np.median(runs))
+
+
 def measure_m5(reference: Path) -> dict[str, dict]:
     texts = m5_patterns(reference)
+    sphere = (reference / "3-sphere" / "pattern.txt").read_text(encoding="utf-8")
+    preview(texts["de"], "de", Params())  # warm-up: imports, data files
+    seconds = {M5_PIECE: _latency(texts["de"]), "3-sphere": _latency(sphere)}
     versions = {d: preview(t, d, Params()) for d, t in texts.items()}
     piece = versions["de"]
     extra = {name: preview(t, "de", Params()) for name, t in M5_EXTRA.items()}
@@ -284,18 +299,10 @@ def measure_m5(reference: Path) -> dict[str, dict]:
         "status": _status(len(hashes) == 1),
         "value": f"{len(hashes)} distinct hash(es) over 3 runs",
     }
-
-    seconds = {}
-    for name, text in (
-        (M5_PIECE, texts["de"]),
-        ("3-sphere", (reference / "3-sphere" / "pattern.txt").read_text(encoding="utf-8")),
-    ):
-        t0 = time.perf_counter()
-        preview(text, "de", Params())
-        seconds[name] = time.perf_counter() - t0
     m["A9"] = {
         "status": _status(all(s < 5.0 for s in seconds.values())),
-        "value": ", ".join(f"{k} {v:.2f} s" for k, v in seconds.items()) + " on this machine",
+        "value": ", ".join(f"{k} {v:.2f} s" for k, v in seconds.items())
+        + f" (median of {A9_RUNS}, measured first) on this machine",
     }
     return m
 
