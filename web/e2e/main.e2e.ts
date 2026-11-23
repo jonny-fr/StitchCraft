@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { SPHERE, startApp, typePattern } from "./helpers";
+import { SPHERE, type Hook, startApp, typePattern } from "./helpers";
 
 test("Beispiel tippen, Lint, Vorschau, Klick auf Masche markiert Token", async ({ page }) => {
   await startApp(page);
@@ -25,12 +25,19 @@ test("Beispiel tippen, Lint, Vorschau, Klick auf Masche markiert Token", async (
 
   // click a stitch in the canvas
   await page.waitForFunction(() => Boolean((window as unknown as { __stitchcraft?: unknown }).__stitchcraft));
-  const hit = await page.evaluate(() => (window as unknown as { __stitchcraft: { hitPoint(): { x: number; y: number } | null } }).__stitchcraft.hitPoint());
+  const hit = await page.evaluate(() => (window as unknown as { __stitchcraft: Hook }).__stitchcraft.hitPoint());
   expect(hit).not.toBeNull();
+
+  // the span of the stitch under the cursor, from the server's shape
+  const id = (await page.getByRole("link", { name: "GLB exportieren" }).getAttribute("href"))!.split("/")[4];
+  const shape = await (await page.request.get(`/api/v1/previews/${id}/shape.json`)).json();
+  const stitch = shape.stitches.find((s: { id: number }) => s.id === hit!.stitch);
+  expect(stitch.span).not.toBeNull();
+  const expected = SPHERE.join("\n").slice(stitch.span.start, stitch.span.end);
+  expect(expected.length).toBeGreaterThan(0);
+
   await page.mouse.click(hit!.x, hit!.y);
 
-  await expect(page.getByText(/^Masche \d+ \(/)).toBeVisible();
-  const selection = await page.evaluate(() => getSelection()?.toString() ?? "");
-  expect(selection.trim().length).toBeGreaterThan(0);
-  expect(SPHERE.join("\n")).toContain(selection);
+  await expect(page.getByText(`Masche ${hit!.stitch} (`)).toBeVisible();
+  expect(await page.evaluate(() => getSelection()?.toString() ?? "")).toBe(expected);
 });

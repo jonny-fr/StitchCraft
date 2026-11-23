@@ -103,7 +103,7 @@ function CameraRig({ radius, view, rounds }: { radius: number; view: View; round
   return null;
 }
 
-/** Test hook (`?e2e`): client coordinates of a visible yarn pixel, found by raycasting a grid from the centre outwards. */
+/** Test hook (`?e2e`): client coordinates and stitch id of a visible yarn pixel, found by raycasting a grid from the centre outwards. */
 function E2eHook() {
   const { scene, camera, gl } = useThree();
   useEffect(() => {
@@ -121,9 +121,17 @@ function E2eHook() {
           ray.setFromCamera(new Vector2(nx, ny), camera);
           const hit = ray.intersectObject(mesh)[0];
           if (hit?.faceIndex != null && geometry.index)
-            return { x: rect.left + ((nx + 1) / 2) * rect.width, y: rect.top + ((1 - ny) / 2) * rect.height };
+            return {
+              x: rect.left + ((nx + 1) / 2) * rect.width,
+              y: rect.top + ((1 - ny) / 2) * rect.height,
+              stitch: geometry.getAttribute("stitch").getX(geometry.index.getX(hit.faceIndex * 3)),
+            };
         }
         return null;
+      },
+      /** Unit vector from the orbit target to the camera. */
+      cameraDirection() {
+        return camera.position.clone().normalize().toArray();
       },
     };
     (window as unknown as { __stitchcraft?: typeof hook }).__stitchcraft = hook;

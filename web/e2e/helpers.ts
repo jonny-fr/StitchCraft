@@ -49,3 +49,19 @@ export async function runPreview(page: Page) {
   await expect(page.locator("canvas")).toBeVisible({ timeout: 60_000 });
   await page.waitForFunction(() => Boolean((window as unknown as { __stitchcraft?: unknown }).__stitchcraft));
 }
+
+/** Flat piece that widens on one side only: front, side, top and iso all look clearly different. */
+export const ASYMMETRIC = [
+  "R 1: 11 Lm, wenden",
+  "R 2: 10 fM, 1 Lm, wenden (10)",
+  "R 3: 9 fM, zun, 1 Lm, wenden (11)",
+  "R 4: 10 fM, zun, 1 Lm, wenden (12)",
+  "R 5: 5 fM, 7 hStb, 1 Lm, wenden (12)",
+  "R 6: 11 fM, zun, 1 Lm, wenden (13)",
+  "R 7: 6 fM, 7 Stb (13)",
+];
+
+export interface Hook {
+  hitPoint(): { x: number; y: number; stitch: number } | null;
+  cameraDirection(): [number, number, number];
+}
