@@ -79,6 +79,11 @@ export async function requestPreview(
   });
   const { id, status } = await json<{ id: string; status: string }>(res);
   if (status !== "done") await waitForPreview(id, onProgress);
+  return loadPreview(id);
+}
+
+/** Fetches an already computed preview from the server's cache. */
+export async function loadPreview(id: string): Promise<PreviewResult> {
   const [bin, shape] = await Promise.all([
     fetch(`/api/v1/previews/${id}/yarn.bin`).then(ok).then((r) => r.arrayBuffer()),
     fetch(`/api/v1/previews/${id}/shape.json`).then((r) => json<Shape>(r)),
