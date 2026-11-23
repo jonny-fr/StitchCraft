@@ -87,5 +87,7 @@ def test_diagnostic_message_fills_placeholders_and_survives_missing_ones():
         "W_AMBIGUOUS_DIALECT", {"candidates": ["a", "b"], "chosen": "a"}, None, "en"
     )
     assert message("snapshot.unavailable", "de") and message("snapshot.unavailable", "en")
+    assert "timeout" in message("snapshot.failed", "en", reason="timeout")
+    assert "{{reason}}" in message("snapshot.failed", "de")
     with pytest.raises(ValueError, match="unknown locale"):
         message("snapshot.unavailable", "fr")

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import os
 import re
@@ -12,6 +13,7 @@ from typing import Annotated, Any, Literal
 import anyio
 from mcp.server.mcpserver import Context, MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
+from mcp_types import CallToolResult, ImageContent, TextContent
 from pydantic import Field, ValidationError
 from stitchcraft_api.schemas import ParamsIn, PatternIn
 from stitchcraft_core.data import load_toml
@@ -24,10 +26,12 @@ from stitchcraft_core.serialize import parse_dict, validation_dict
 from stitchcraft_core.validate import validate
 
 from stitchcraft_mcp import snapshot
+from stitchcraft_mcp.snapshot import SnapshotFailed
 
 VIEWS = ("front", "side", "top", "iso")
 DEFAULT_PORT = 8765
 KEY = re.compile(r"[0-9a-zA-Z]+")
+COLOR = re.compile(r"[0-9a-f]{6}")
 FILES = {"model.glb": "model/gltf-binary", "shape.json": "application/json"}
 
 Text = Annotated[str, Field(description="Crochet pattern, one round/row per line")]
@@ -68,8 +72,8 @@ def _localised(diagnostics: list[dict], locale: str) -> list[dict]:
     for d in diagnostics:
         span = d["span"] or {}
         line, col = span.get("line"), span.get("col")
-        message = diagnostic_message(d["code"], d["params"], line, locale)
-        out.append({**d, "line": line, "col": col, "message": message})
+        text = diagnostic_message(d["code"], d["params"], line, locale)
+        out.append({**d, "line": line, "col": col, "message": text})
     return out
 
 
@@ -142,9 +146,10 @@ def create_server(cache_dir: Path | None = None) -> MCPServer:
             Literal["front", "side", "top", "iso"], Field(description="Camera for the PNG")
         ] = "front",
         ui_locale: UiLocale = "de",
-    ) -> dict[str, Any]:
-        """Simulate the yarn and return the 3D model (GLB resource) with statistics. Results are
-        cached by content, so repeating a call is instant."""
+    ) -> Annotated[CallToolResult, dict[str, Any]]:
+        """Simulate the yarn and return the 3D model (GLB resource) with statistics and, when the
+        snapshot service runs, a PNG of the piece from `view`. Results are cached by content, so
+        repeating a call is instant."""
         locale = _locale(ui_locale)
         body = _pattern(text, dialect)
         params_in = _params(params)
@@ -157,11 +162,22 @@ def create_server(cache_dir: Path | None = None) -> MCPServer:
             await ctx.report_progress(1.0, 1.0, "cached")
         else:
             meta = await _simulate(ctx, body, core_params, key, locale)
-        png = await snapshot.render_png(key, view)
+        color = core_params.color.lstrip("#").lower()
         uris = {
             "model": f"stitchcraft://previews/{key}/model.glb",
             "shape": f"stitchcraft://previews/{key}/shape.json",
         }
+        notes: list[str] = []
+        png: bytes | None = None
+        try:
+            png = await snapshot.render_png(cache, key, view, color, core_params.material)
+        except SnapshotFailed as exc:
+            notes.append(message("snapshot.failed", locale, reason=str(exc)))
+        else:
+            if png is None:
+                notes.append(message("snapshot.unavailable", locale))
+        if png is not None:
+            uris["png"] = f"stitchcraft://previews/{key}/{color}/{view}.png"
         out: dict[str, Any] = {
             "id": key,
             "cached": cached,
@@ -170,9 +186,13 @@ def create_server(cache_dir: Path | None = None) -> MCPServer:
             "stats": meta["stats"],
             "diagnostics": _localised(meta["diagnostics"], locale),
         }
-        if png is None:
-            out["notes"] = [message("snapshot.unavailable", locale)]
-        return out
+        if notes:
+            out["notes"] = notes
+        content: list[TextContent | ImageContent] = [TextContent(type="text", text=json.dumps(out))]
+        if png is not None:
+            data = base64.b64encode(png).decode()
+            content.append(ImageContent(type="image", data=data, mime_type="image/png"))
+        return CallToolResult(content=content, structured_content=out)
 
     async def _simulate(ctx: Context, body: PatternIn, params: Params, key: str, locale: str):
         def run() -> dict:
@@ -202,6 +222,13 @@ def create_server(cache_dir: Path | None = None) -> MCPServer:
     def preview_shape(key: str) -> bytes:
         """Stitch positions and metadata of a preview created by render_preview."""
         return _read(key, "shape.json")
+
+    @mcp.resource("stitchcraft://previews/{key}/{color}/{view}.png", mime_type="image/png")
+    def preview_png(key: str, color: str, view: str) -> bytes:
+        """PNG snapshot of a preview in yarn colour `color` (6 hex digits) from `view`."""
+        if not COLOR.fullmatch(color) or view not in VIEWS:
+            raise ValueError(f"unknown snapshot {color}/{view}")
+        return _read(key, f"snapshots/{color}-{view}.png")
 
     def _read(key: str, name: str) -> bytes:
         path = cache / key / name

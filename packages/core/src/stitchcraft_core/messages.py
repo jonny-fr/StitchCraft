@@ -34,7 +34,7 @@ def diagnostic_message(code: str, params: dict[str, Any], line: int | None, loca
     return _fill(template, {**params, "line": line})
 
 
-def message(key: str, locale: str) -> str:
-    """`key` is `section.name`, e.g. `snapshot.unavailable`."""
+def message(key: str, locale: str, **values: Any) -> str:
+    """`key` is `section.name`, e.g. `snapshot.unavailable`; `values` fill `{{placeholders}}`."""
     section, name = key.split(".", 1)
-    return str(_catalog(locale)[section][name])
+    return _fill(str(_catalog(locale)[section][name]), values)

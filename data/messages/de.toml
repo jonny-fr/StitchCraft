@@ -14,6 +14,7 @@ W_GLOSSARY_UNKNOWN = "Zeile {{line}}: Abkürzung „{{abbr}}“ = „{{meaning}}
 
 [snapshot]
 unavailable = "Snapshot-Dienst nicht verfügbar: Es gibt nur das GLB-Modell und die Statistik, kein PNG."
+failed = "Snapshot-Dienst nicht nutzbar ({{reason}}): Es gibt nur das GLB-Modell und die Statistik, kein PNG."
 
 [preview]
 nothing = "Keine Maschen zum Simulieren gefunden."

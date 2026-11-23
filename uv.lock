@@ -1159,6 +1159,7 @@ name = "stitchcraft-mcp"
 version = "0.1.0"
 source = { editable = "services/mcp" }
 dependencies = [
+    { name = "httpx" },
     { name = "mcp" },
     { name = "stitchcraft-api" },
     { name = "stitchcraft-core" },
@@ -1166,6 +1167,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "httpx", specifier = ">=0.27" },
     { name = "mcp", specifier = ">=2" },
     { name = "stitchcraft-api", editable = "services/api" },
     { name = "stitchcraft-core", editable = "packages/core" },

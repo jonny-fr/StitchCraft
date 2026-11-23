@@ -1,20 +1,70 @@
-"""Hook for the PNG snapshot service (added in a later milestone).
+"""Client for the PNG snapshot service (`services/snapshot`).
 
 `STITCHCRAFT_SNAPSHOT_URL` unset means there is no service; `render_preview` then answers with the
-GLB resource and statistics plus a note instead of failing.
+GLB resource and statistics plus a note instead of failing. A configured but broken service raises
+`SnapshotFailed`, which the tool turns into a note as well.
 """
 
 from __future__ import annotations
 
 import os
+from pathlib import Path
+
+import httpx
+
+PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
+CONNECT_TIMEOUT = 2.0  # compose sets the URL even when the profile is off: fail fast on DNS/refused
+
+
+class SnapshotFailed(Exception):
+    """The service is configured but did not deliver a PNG; `str(exc)` is the reason."""
 
 
 def snapshot_url() -> str | None:
     return os.environ.get("STITCHCRAFT_SNAPSHOT_URL") or None
 
 
-async def render_png(key: str, view: str) -> bytes | None:
-    """PNG of the cached preview `key` seen from `view`; None when no snapshot service is set."""
-    if snapshot_url() is None:
+def render_timeout() -> float:
+    return float(os.environ.get("STITCHCRAFT_SNAPSHOT_TIMEOUT", "90"))
+
+
+def png_path(cache: Path, key: str, color: str, view: str) -> Path:
+    return cache / key / "snapshots" / f"{color}-{view}.png"
+
+
+async def render_png(cache: Path, key: str, view: str, color: str, material: str) -> bytes | None:
+    """PNG of the cached preview `key`; None when no snapshot service is configured.
+
+    `color` is 6 lower-case hex digits. A PNG already in the cache is returned without a render.
+    """
+    url = snapshot_url()
+    if url is None:
         return None
-    return None  # the snapshot client replaces this line
+    path = png_path(cache, key, color, view)
+    if path.exists():
+        return path.read_bytes()
+    body = {"key": key, "view": view, "color": color, "material": material}
+    timeout = httpx.Timeout(render_timeout(), connect=CONNECT_TIMEOUT)
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as http:
+            response = await http.post(f"{url.rstrip('/')}/render", json=body)
+    except httpx.TimeoutException as exc:
+        raise SnapshotFailed(f"timeout ({type(exc).__name__})") from exc
+    except httpx.HTTPError as exc:
+        raise SnapshotFailed(f"not reachable: {type(exc).__name__}") from exc
+    if response.status_code != 200:
+        raise SnapshotFailed(f"HTTP {response.status_code}: {_error_text(response)}")
+    if not response.content.startswith(PNG_MAGIC):
+        raise SnapshotFailed("response is not a PNG")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(f".{os.getpid()}.tmp")
+    tmp.write_bytes(response.content)
+    tmp.replace(path)
+    return response.content
+
+
+def _error_text(response: httpx.Response) -> str:
+    try:
+        return str(response.json()["error"])[:200]
+    except ValueError, KeyError, TypeError:
+        return response.text[:200]

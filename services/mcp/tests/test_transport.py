@@ -1,3 +1,4 @@
+import os
 import socket
 import subprocess
 import sys
@@ -32,12 +33,13 @@ async def test_http_initialize_and_list_tools(tmp_path):
     port = free_port()
     proc = subprocess.Popen(
         [sys.executable, "-m", "stitchcraft_mcp.server", "http", "--port", str(port)],
-        env={**__import__("os").environ, "STITCHCRAFT_CACHE": str(tmp_path)},
+        env={**os.environ, "STITCHCRAFT_CACHE": str(tmp_path)},
         stderr=subprocess.DEVNULL,
     )
     try:
         deadline = time.monotonic() + 20
         while time.monotonic() < deadline:
+            assert proc.poll() is None, "server exited before listening"
             with socket.socket() as s:
                 if s.connect_ex(("127.0.0.1", port)) == 0:
                     break
