@@ -63,6 +63,7 @@ header h1 { font-size: 1.1rem; margin: 0; margin-right: auto; }
   height: 100%;
   background: var(--panel);
 }
+.editor > * { flex-shrink: 0; } /* the pane scrolls; children must not squeeze (the editor overflowed onto the buttons) */
 .pattern-editor { border: 1px solid var(--line); border-radius: 6px; background: var(--bg); min-height: 16rem; }
 .pattern-editor .cm-editor { min-height: 16rem; max-height: 60vh; }
 .pattern-editor .cm-scroller { font: 14px/1.5 ui-monospace, "SF Mono", Menlo, monospace; }
