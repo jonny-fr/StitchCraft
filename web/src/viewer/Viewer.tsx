@@ -6,8 +6,11 @@ import {
   BufferAttribute,
   CanvasTexture,
   RepeatWrapping,
+  Raycaster,
+  Vector2,
   Vector3,
   type BufferGeometry,
+  type Mesh,
   type PerspectiveCamera,
 } from "three";
 import type { Material } from "../api";
@@ -100,6 +103,35 @@ function CameraRig({ radius, view, rounds }: { radius: number; view: View; round
   return null;
 }
 
+/** Test hook (`?e2e`): client coordinates of a visible yarn pixel, found by raycasting a grid from the centre outwards. */
+function E2eHook() {
+  const { scene, camera, gl } = useThree();
+  useEffect(() => {
+    const hook = {
+      hitPoint() {
+        const mesh = scene.children.find((o) => (o as Mesh).isMesh) as Mesh | undefined;
+        if (!mesh) return null;
+        const rect = gl.domElement.getBoundingClientRect();
+        const ray = new Raycaster();
+        const geometry = mesh.geometry;
+        const spots: [number, number][] = [];
+        for (let i = -9; i <= 9; i++) for (let j = -9; j <= 9; j++) spots.push([i / 10, j / 10]);
+        spots.sort((a, b) => Math.hypot(...a) - Math.hypot(...b));
+        for (const [nx, ny] of spots) {
+          ray.setFromCamera(new Vector2(nx, ny), camera);
+          const hit = ray.intersectObject(mesh)[0];
+          if (hit?.faceIndex != null && geometry.index)
+            return { x: rect.left + ((nx + 1) / 2) * rect.width, y: rect.top + ((1 - ny) / 2) * rect.height };
+        }
+        return null;
+      },
+    };
+    (window as unknown as { __stitchcraft?: typeof hook }).__stitchcraft = hook;
+    return () => void delete (window as unknown as { __stitchcraft?: typeof hook }).__stitchcraft;
+  }, [scene, camera, gl]);
+  return null;
+}
+
 function YarnMesh({ geometry, material, yarn, colorOf, silhouette, selected, onSelect, drawCount, centre }: {
   geometry: BufferGeometry; material: Material; yarn: Yarn; colorOf: Map<number, string>; silhouette: boolean; selected: number | null;
   onSelect(id: number): void; drawCount: number; centre: Vector3;
@@ -168,6 +200,7 @@ export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer(props, ref
       style={{ background: silhouette ? "#ffffff" : "var(--viewer-bg)" }}
     >
       {showFps && <Stats />}
+      {new URLSearchParams(location.search).has("e2e") && <E2eHook />}
       <CameraRig radius={radius} view={view} rounds={rounds} />
       <OrbitControls makeDefault enableDamping />
       {!silhouette && (

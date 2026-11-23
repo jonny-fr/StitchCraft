@@ -1,4 +1,4 @@
-"""Every diagnostic code, hover term and progress stage the UI shows has text in every UI language."""
+"""Every diagnostic code, hover term and progress stage has text in every UI language."""
 
 import json
 import re
@@ -41,7 +41,7 @@ def test_every_code_has_text(lang):
 
 @pytest.mark.parametrize("lang", LANGS)
 def test_every_progress_stage_has_text(lang):
-    assert STAGES <= set(catalog(lang)["app"]["stage"])
+    assert set(catalog(lang)["app"]["stage"]) >= STAGES
 
 
 @pytest.mark.parametrize("lang", LANGS)
