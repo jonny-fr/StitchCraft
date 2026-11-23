@@ -74,10 +74,18 @@ describe("loadColors", () => {
 });
 
 describe("loadColorSettings", () => {
-  it("moves a stored pick for the first open colour into params.color and drops it", () => {
+  it("moves an unmarked stored pick for the first open colour into params.color, drops it and marks the storage", () => {
     save(KEYS.params, { ...defaultParams, yarn_mm: 3 });
     save(KEYS.colors, { "A:#efe6d2": "#336699", "B:#c0392b": "#00ff00" });
-    expect(loadColorSettings()).toEqual({ params: { ...defaultParams, yarn_mm: 3, color: "#336699" }, picks: { "B:#c0392b": "#00ff00" } });
+    const migrated = { params: { ...defaultParams, yarn_mm: 3, color: "#336699" }, picks: { "B:#c0392b": "#00ff00" } };
+    expect(loadColorSettings()).toEqual(migrated);
+    expect([load(KEYS.params, null), load(KEYS.colors, null), load(KEYS.colorRule, null)]).toEqual([migrated.params, migrated.picks, 2]);
+  });
+  it("migrates only once: a later pick for a defined creme colour survives reloads", () => {
+    expect(loadColorSettings().picks).toEqual({}); // first start marks the storage
+    save(KEYS.colors, { "A:#efe6d2": "#ff0000" }); // the UI recolours a pattern colour "natur"
+    expect(loadColorSettings()).toEqual({ params: defaultParams, picks: { "A:#efe6d2": "#ff0000" } });
+    expect(loadColorSettings().picks).toEqual({ "A:#efe6d2": "#ff0000" });
   });
   it("keeps params.color without such a pick", () => {
     save(KEYS.params, { ...defaultParams, color: "#123456" });

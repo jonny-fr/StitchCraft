@@ -1,5 +1,5 @@
 import { defaultParams, paramsValid, type Params } from "./api";
-import { migrateOpenPick, type ColorPicks } from "./colors";
+import { COLOR_RULE, migrateOpenPick, type ColorPicks } from "./colors";
 import { DIALECT_IDS } from "./dialects";
 
 export interface StitchFile {
@@ -16,7 +16,7 @@ const FORMAT = "stitchcraft";
 const VERSION = 1;
 
 export function serializeStitchFile(file: StitchFile): string {
-  return JSON.stringify({ format: FORMAT, version: VERSION, ...file }, null, 2);
+  return JSON.stringify({ format: FORMAT, version: VERSION, colorRule: COLOR_RULE, ...file }, null, 2);
 }
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -46,8 +46,8 @@ export function parseStitchFile(raw: string): ParsedStitchFile {
     for (const [k, v] of Object.entries(data.colors)) if (typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v)) picks[k] = v;
   }
   const params = sanitizeParams(data.params);
-  // older files kept the first open colour as a pick; it lives in params.color now
-  const { color, picks: colors } = migrateOpenPick({ color: params.color, picks });
+  // files without the marker may keep the first open colour as a pick; it lives in params.color now
+  const { color, picks: colors } = data.colorRule === COLOR_RULE ? { color: params.color, picks } : migrateOpenPick({ color: params.color, picks });
   return {
     ok: true,
     file: {

@@ -1,5 +1,5 @@
 import { defaultParams, paramsValid, type Params } from "./api";
-import { migrateOpenPick, type ColorPicks } from "./colors";
+import { COLOR_RULE, migrateOpenPick, type ColorPicks } from "./colors";
 import { DIALECT_IDS } from "./dialects";
 import { THEMES, type Theme } from "./theme";
 
@@ -8,6 +8,7 @@ export const KEYS = {
   dialect: "stitchcraft.dialect",
   params: "stitchcraft.params",
   colors: "stitchcraft.colors",
+  colorRule: "stitchcraft.colorRule",
   lang: "stitchcraft.lang",
   theme: "stitchcraft.theme",
 } as const;
@@ -53,11 +54,17 @@ export function loadColors(): ColorPicks {
   return Object.fromEntries(Object.entries(v).filter(([, c]) => typeof c === "string")) as ColorPicks;
 }
 
-/** Params and colour picks, with a pick for the first open colour moved into `params.color`. */
+/** Params and colour picks; stored data from before COLOR_RULE is migrated once, saved and marked. */
 export function loadColorSettings(): { params: Params; picks: ColorPicks } {
   const params = loadParams();
-  const { color, picks } = migrateOpenPick({ color: params.color, picks: loadColors() });
-  return { params: { ...params, color }, picks };
+  const picks = loadColors();
+  if (load<unknown>(KEYS.colorRule, null) === COLOR_RULE) return { params, picks };
+  const migrated = migrateOpenPick({ color: params.color, picks });
+  const out = { params: { ...params, color: migrated.color }, picks: migrated.picks };
+  save(KEYS.params, out.params);
+  save(KEYS.colors, out.picks);
+  save(KEYS.colorRule, COLOR_RULE);
+  return out;
 }
 
 /** The UI theme; dark unless another one was chosen. */

@@ -245,6 +245,7 @@ test.describe("U3 Farbe", () => {
     const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: /Exportieren/ }).click()]);
     const saved = JSON.parse(await (await import("node:fs/promises")).readFile((await download.path())!, "utf8"));
     expect(saved.params.color).toBe("#2e6fb5");
+    expect(saved.colorRule).toBe(2); // marks the file as already migrated
 
     await openPopover(page, segment(page, "Farben"));
     await page.getByLabel("Garnfarbe").fill("#000000");

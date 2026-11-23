@@ -27,9 +27,15 @@ export function pickColor(palette: PaletteColor[], entry: PaletteColor, hex: str
 }
 
 /**
- * Picks an older version stored for a first open entry (key `<code>:FIRST_FALLBACK`) move into the yarn colour.
- * Without the palette the key is all there is to go by, so a pick for a pattern colour that is itself
- * FIRST_FALLBACK ("creme") moves too.
+ * Version of the colour rule above. Data from rule 1 (no marker) could also hold a pick for the first open entry;
+ * it is migrated once with `migrateOpenPick` and then marked with this version, so later picks stay untouched.
+ */
+export const COLOR_RULE = 2;
+
+/**
+ * One-time migration of rule-1 data: picks for a first open entry (key `<code>:FIRST_FALLBACK`) move into the yarn
+ * colour. Without the palette the key is all there is to go by, so a rule-1 pick for a pattern colour that is itself
+ * FIRST_FALLBACK ("creme") moves too; run it only on data without the COLOR_RULE marker.
  */
 export function migrateOpenPick(state: ColorState): ColorState {
   const open = Object.keys(state.picks).filter((k) => k.endsWith(`:${FIRST_FALLBACK}`));
