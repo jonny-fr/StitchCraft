@@ -1,14 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { ASYMMETRIC, SPHERE } from "./helpers";
-
-const API = "http://localhost:8766";
-
-async function createPreview(page: Page, lines: string[]): Promise<string> {
-  const res = await page.request.post(`${API}/api/v1/previews`, { data: { text: lines.join("\n"), dialect: "de", params: {} } });
-  const { id } = await res.json();
-  await expect.poll(async () => (await page.request.get(`${API}/api/v1/previews/${id}/shape.json`)).status(), { timeout: 60_000 }).toBe(200);
-  return id;
-}
+import { ASYMMETRIC, createPreview, SPHERE } from "./helpers";
 
 const status = (page: Page) => page.evaluate(() => (window as unknown as { __stitchcraftSnapshot?: string }).__stitchcraftSnapshot);
 

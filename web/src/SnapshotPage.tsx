@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { loadPreview, type PreviewResult } from "./api";
-import { paletteColors, type SnapshotQuery } from "./snapshot";
+import { paletteColors } from "./colors";
+import type { SnapshotQuery } from "./snapshot";
 import { Viewer } from "./viewer/Viewer";
 
 type Status = "loading" | "ready" | "error";
+/** Fixed, whatever the UI theme: the MCP PNGs must not change with it. */
+const BACKGROUND = "#ebe6de";
 const SETTLE_FRAMES = 20; // the first frames still load the environment and run the AO pass
 
 /** Headless render target for the snapshot service: only the viewer, full screen, no controls. */
@@ -48,7 +51,7 @@ export default function SnapshotPage({ query }: { query: SnapshotQuery }) {
   }, [result, query.color]);
 
   return (
-    <div data-snapshot={status} style={{ position: "fixed", inset: 0, background: "var(--viewer-bg)" }}>
+    <div data-snapshot={status} style={{ position: "fixed", inset: 0, background: BACKGROUND, ["--viewer-bg" as string]: BACKGROUND }}>
       {result && (
         <Viewer
           yarn={result.yarn}

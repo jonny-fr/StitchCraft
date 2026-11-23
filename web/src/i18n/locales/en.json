@@ -7,7 +7,7 @@
     "sample": "Sample",
     "preview": "3D preview",
     "computing": "Computing …",
-    "noDiagnostics": "No issues found.",
+    "noDiagnostics": "No problems",
     "rowCounts": "Stitches per row",
     "row": "Rnd/Row {{number}}",
     "material": "Yarn & execution",
@@ -36,7 +36,6 @@
     "viewerTab": "3D",
     "error": "Error: {{message}}",
     "invalidParams": "Please enter valid values for yarn, hook and gauge.",
-    "colors": "Yarn colours",
     "colorFallback": "Colour not set by the pattern – pick one",
     "autoDialect": "automatic ({{dialect}})",
     "pickDialect": "US or UK terms?",
@@ -54,6 +53,32 @@
       "yarn": "Laying yarn",
       "export": "Writing files",
       "done": "Done"
+    },
+    "menu": "Menu",
+    "theme": "Theme",
+    "themes": {
+      "dark": "Dark",
+      "light": "Light",
+      "system": "System"
+    },
+    "tools": "Tools",
+    "export": "Export",
+    "yarn": "Yarn",
+    "dialectShort": "Terms",
+    "colorsShort": "Colours",
+    "context": "Pattern, yarn and colours",
+    "tabs": "Choose view",
+    "noPreview": "No 3D preview yet",
+    "colorOf": "Colour {{ref}}",
+    "colorOpen": "Colour {{ref}} (yarn colour)",
+    "status": {
+      "checking": "Checking …",
+      "error_one": "{{count}} error",
+      "error_other": "{{count}} errors",
+      "warning_one": "{{count}} warning",
+      "warning_other": "{{count}} warnings",
+      "info_one": "{{count}} note",
+      "info_other": "{{count}} notes"
     }
   },
   "diagnostics": {
@@ -122,6 +147,7 @@
       "acrylic": "Acrylic",
       "mohair": "Mohair"
     },
-    "color": "Yarn colour (if the pattern sets none)"
+    "color": "Yarn colour",
+    "more": "More"
   }
 }

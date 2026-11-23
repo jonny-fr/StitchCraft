@@ -1,4 +1,4 @@
-import { MATERIALS, type Material, type PaletteColor } from "./api";
+import { MATERIALS, type Material } from "./api";
 import type { View } from "./viewer/Viewer";
 
 export const VIEWS: View[] = ["front", "side", "top", "iso"];
@@ -15,9 +15,4 @@ export function parseSnapshotQuery(search: string): SnapshotQuery | null {
   const material = (q.get("material") ?? "cotton") as Material;
   if (!/^[0-9a-zA-Z]+$/.test(key) || !VIEWS.includes(view) || !/^[0-9a-f]{6}$/.test(color) || !MATERIALS.includes(material)) return null;
   return { key, view, color: `#${color}`, material };
-}
-
-/** Same rule as the editor: the first palette colour the pattern leaves open takes the yarn colour. */
-export function paletteColors(palette: PaletteColor[], color: string): Map<string, string> {
-  return new Map(palette.map((c) => [c.ref, !c.defined && c.ref === palette[0]?.ref ? color : c.hex]));
 }

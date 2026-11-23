@@ -7,7 +7,7 @@
     "sample": "Beispiel",
     "preview": "3D-Vorschau",
     "computing": "Berechne …",
-    "noDiagnostics": "Keine Auffälligkeiten.",
+    "noDiagnostics": "Keine Probleme",
     "rowCounts": "Maschen je Reihe",
     "row": "Rd./R. {{number}}",
     "material": "Material & Ausführung",
@@ -36,7 +36,6 @@
     "viewerTab": "3D",
     "error": "Fehler: {{message}}",
     "invalidParams": "Bitte gültige Werte für Garn, Nadel und Maschenprobe eingeben.",
-    "colors": "Garnfarben",
     "colorFallback": "Farbe nicht in der Anleitung festgelegt – frei wählbar",
     "autoDialect": "automatisch ({{dialect}})",
     "pickDialect": "US- oder UK-Begriffe?",
@@ -54,6 +53,32 @@
       "yarn": "Lege Garn",
       "export": "Erzeuge Dateien",
       "done": "Fertig"
+    },
+    "menu": "Menü",
+    "theme": "Darstellung",
+    "themes": {
+      "dark": "Dunkel",
+      "light": "Hell",
+      "system": "wie System"
+    },
+    "tools": "Werkzeuge",
+    "export": "Export",
+    "yarn": "Garn",
+    "dialectShort": "Dialekt",
+    "colorsShort": "Farben",
+    "context": "Anleitung, Garn und Farben",
+    "tabs": "Ansicht wählen",
+    "noPreview": "Noch keine 3D-Vorschau",
+    "colorOf": "Farbe {{ref}}",
+    "colorOpen": "Farbe {{ref}} (Garnfarbe)",
+    "status": {
+      "checking": "Prüfe …",
+      "error_one": "{{count}} Fehler",
+      "error_other": "{{count}} Fehler",
+      "warning_one": "{{count}} Warnung",
+      "warning_other": "{{count}} Warnungen",
+      "info_one": "{{count}} Hinweis",
+      "info_other": "{{count}} Hinweise"
     }
   },
   "diagnostics": {
@@ -122,6 +147,7 @@
       "acrylic": "Acryl",
       "mohair": "Mohair"
     },
-    "color": "Garnfarbe (ohne Festlegung in der Anleitung)"
+    "color": "Garnfarbe",
+    "more": "Mehr"
   }
 }

@@ -1,4 +1,6 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
+
+const API = "http://localhost:8766"; // playwright.config.ts API_PORT
 
 export const SPHERE = [
   "Rd. 1: 6 fM in MR (6)",
@@ -64,4 +66,46 @@ export const ASYMMETRIC = [
 export interface Hook {
   hitPoint(): { x: number; y: number; stitch: number } | null;
   cameraDirection(): [number, number, number];
+}
+
+/** Computes a preview straight through the API and waits until it is cached; returns its key. */
+export async function createPreview(page: Page, lines: string[]): Promise<string> {
+  const res = await page.request.post(`${API}/api/v1/previews`, { data: { text: lines.join("\n"), dialect: "de", params: {} } });
+  const { id } = await res.json();
+  await expect.poll(async () => (await page.request.get(`${API}/api/v1/previews/${id}/shape.json`)).status(), { timeout: 60_000 }).toBe(200);
+  return id;
+}
+
+/** A segment of the context pill ("Dialekt", "Garn", "Farben"); its name is the title plus the current value. */
+export const segment = (page: Page, title: string) => page.getByRole("button", { name: new RegExp(`^${title}(\\s|$)`) });
+
+export const menuButton = (page: Page) => page.getByRole("button", { name: /^(Menü|Menu)$/ });
+
+/** Clicks a popover trigger and returns the panel it opened. */
+export async function openPopover(page: Page, trigger: Locator): Promise<Locator> {
+  await trigger.click();
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  return dialog;
+}
+
+/** Opens the yarn popover with all fields shown. */
+export async function openYarn(page: Page): Promise<Locator> {
+  const dialog = await openPopover(page, segment(page, "Garn"));
+  const more = dialog.getByRole("button", { name: "Mehr" });
+  if ((await more.getAttribute("aria-expanded")) !== "true") await more.click();
+  return dialog;
+}
+
+export async function closePopover(page: Page) {
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+}
+
+/** Picks a .stitch.json through the menu's import entry, like a person in the file dialog. */
+export async function importStitchFile(page: Page, file: string | { name: string; mimeType: string; buffer: Buffer }) {
+  await openPopover(page, menuButton(page));
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.locator("label", { hasText: "Importieren" }).click()]);
+  await chooser.setFiles(file);
 }

@@ -6,7 +6,7 @@ const file = {
   text: "Rd. 1: 6 fM in MR (6)",
   dialect: "de",
   params: { ...defaultParams, material: "mohair" as const, right_side_out: false, gauge_stitches: 14 },
-  colors: { "A:#efe6d2": "#ff0000" },
+  colors: { "B:#c0392b": "#ff0000" },
 };
 
 describe("stitch file", () => {
@@ -28,6 +28,12 @@ describe("stitch file", () => {
     expect(r.ok && r.file).toEqual({
       text: "x", dialect: "de", params: { ...defaultParams, hook_mm: 4 }, colors: { b: "#00ff00" },
     });
+  });
+  it("moves an old pick for the first open colour into params.color", () => {
+    const old = serializeStitchFile({ ...file, colors: { "A:#efe6d2": "#ff0000", "B:#c0392b": "#00ff00" } });
+    const r = parseStitchFile(old);
+    expect(r.ok && r.file.params.color).toBe("#ff0000");
+    expect(r.ok && r.file.colors).toEqual({ "B:#c0392b": "#00ff00" });
   });
   it("accepts a file without params and colors", () => {
     const r = parseStitchFile('{"format":"stitchcraft","version":1,"text":"x"}');

@@ -1,4 +1,7 @@
 import { defaultParams, paramsValid, type Params } from "./api";
+import { migrateOpenPick, type ColorPicks } from "./colors";
+import { DIALECT_IDS } from "./dialects";
+import { THEMES, type Theme } from "./theme";
 
 export const KEYS = {
   text: "stitchcraft.text",
@@ -6,6 +9,7 @@ export const KEYS = {
   params: "stitchcraft.params",
   colors: "stitchcraft.colors",
   lang: "stitchcraft.lang",
+  theme: "stitchcraft.theme",
 } as const;
 
 export function load<T>(key: string, fallback: T): T {
@@ -32,8 +36,6 @@ export function loadParams(): Params {
   return paramsValid(merged) ? merged : defaultParams;
 }
 
-export const DIALECT_IDS = ["auto", "de", "en-US", "en-UK"];
-
 export function loadDialect(): string {
   const v = loadString(KEYS.dialect, "de");
   return DIALECT_IDS.includes(v) ? v : "de";
@@ -45,8 +47,21 @@ export function loadString(key: string, fallback: string): string {
 }
 
 /** Colour picks: a map of strings, other entries dropped. */
-export function loadColors(): Record<string, string> {
+export function loadColors(): ColorPicks {
   const v = load<unknown>(KEYS.colors, {});
   if (typeof v !== "object" || v === null || Array.isArray(v)) return {};
-  return Object.fromEntries(Object.entries(v).filter(([, c]) => typeof c === "string")) as Record<string, string>;
+  return Object.fromEntries(Object.entries(v).filter(([, c]) => typeof c === "string")) as ColorPicks;
+}
+
+/** Params and colour picks, with a pick for the first open colour moved into `params.color`. */
+export function loadColorSettings(): { params: Params; picks: ColorPicks } {
+  const params = loadParams();
+  const { color, picks } = migrateOpenPick({ color: params.color, picks: loadColors() });
+  return { params: { ...params, color }, picks };
+}
+
+/** The UI theme; dark unless another one was chosen. */
+export function loadTheme(): Theme {
+  const v = loadString(KEYS.theme, "dark");
+  return (THEMES as readonly string[]).includes(v) ? (v as Theme) : "dark";
 }

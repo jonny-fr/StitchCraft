@@ -1,7 +1,17 @@
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { setDiagnostics, type Diagnostic as CmDiagnostic } from "@codemirror/lint";
 import { Compartment, EditorState, RangeSet, StateEffect, StateField } from "@codemirror/state";
-import { EditorView, GutterMarker, gutter, hoverTooltip, keymap, lineNumbers } from "@codemirror/view";
+import {
+  EditorView,
+  GutterMarker,
+  drawSelection,
+  gutter,
+  highlightActiveLine,
+  highlightActiveLineGutter,
+  hoverTooltip,
+  keymap,
+  lineNumbers,
+} from "@codemirror/view";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import type { Diagnostic, RowCount } from "../api";
 import { countMarkers, patternHighlight, patternLanguage, wordAt, type CountMarker, type Word } from "./language";
@@ -20,6 +30,7 @@ interface Props {
   describe(w: Word): string;
   onCaret(pos: number): void;
   label: string;
+  dark: boolean;
 }
 
 const setCounts = StateEffect.define<Map<number, CountMarker>>();
@@ -55,12 +66,28 @@ const countGutter = gutter({
   },
 });
 
+/** Caret, selection and active line from the app's tokens; `dark` switches CodeMirror's own defaults. */
+const editorTheme = (dark: boolean) =>
+  EditorView.theme(
+    {
+      ".cm-cursor, .cm-dropCursor": { borderLeft: "2px solid var(--accent)" },
+      "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, ::selection": {
+        backgroundColor: "var(--editor-selection)",
+      },
+      ".cm-activeLine": { backgroundColor: "var(--editor-active-line)" },
+      ".cm-activeLineGutter": { backgroundColor: "var(--editor-active-line)", color: "var(--text)" },
+      ".cm-tooltip": { backgroundColor: "var(--raised)", color: "var(--text)", border: "1px solid var(--line)", borderRadius: "8px" },
+    },
+    { dark },
+  );
+
 export const PatternEditor = forwardRef<EditorHandle, Props>(function PatternEditor(props, ref) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const latest = useRef(props);
   latest.current = props;
   const language = useRef(new Compartment());
+  const theme = useRef(new Compartment());
 
   useImperativeHandle(ref, () => ({
     select(from, to) {
@@ -94,15 +121,20 @@ export const PatternEditor = forwardRef<EditorHandle, Props>(function PatternEdi
         doc: latest.current.value,
         extensions: [
           lineNumbers(),
+          highlightActiveLineGutter(),
           counts,
           countGutter,
           history(),
           keymap.of([...defaultKeymap, ...historyKeymap]),
           language.current.of(patternLanguage(latest.current.words)),
           patternHighlight,
+          drawSelection(),
+          highlightActiveLine(),
+          theme.current.of(editorTheme(latest.current.dark)),
           hover,
           EditorView.lineWrapping,
-          EditorView.contentAttributes.of({ "aria-label": latest.current.label, spellcheck: "false" }),
+          // an explicit tabindex tells a11y checkers the scrolling editor holds focusable content (it is focusable anyway)
+          EditorView.contentAttributes.of({ "aria-label": latest.current.label, spellcheck: "false", tabindex: "0" }),
           EditorView.updateListener.of((u) => {
             if (u.docChanged) latest.current.onChange(u.state.doc.toString());
             if (u.selectionSet && u.view.hasFocus) latest.current.onCaret(u.state.selection.main.head);
@@ -125,6 +157,10 @@ export const PatternEditor = forwardRef<EditorHandle, Props>(function PatternEdi
   useEffect(() => {
     view.current?.dispatch({ effects: language.current.reconfigure(patternLanguage(props.words)) });
   }, [props.words]);
+
+  useEffect(() => {
+    view.current?.dispatch({ effects: theme.current.reconfigure(editorTheme(props.dark)) });
+  }, [props.dark]);
 
   useEffect(() => {
     const v = view.current;

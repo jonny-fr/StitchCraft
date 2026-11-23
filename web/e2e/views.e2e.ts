@@ -15,6 +15,16 @@ const DIRECTION: Record<ViewId, [number, number, number]> = {
 };
 const SHOT = { animations: "disabled", maxDiffPixelRatio: 0.005, threshold: 0.2 } as const;
 
+/** Runs `shoot` with the controls that float over the canvas hidden (the stats chip shows timings): the render only. */
+async function renderOnly<T>(page: Page, shoot: () => Promise<T>): Promise<T> {
+  const style = await page.addStyleTag({ content: ".info-chip, .viewer-actions, .dock { visibility: hidden !important; }" });
+  try {
+    return await shoot();
+  } finally {
+    await style.evaluate((el) => (el as Element).remove());
+  }
+}
+
 async function select(page: Page, view: ViewId) {
   const label = VIEWS.find(([v]) => v === view)![1];
   const button = page.getByRole("button", { name: label, exact: true });
@@ -37,7 +47,7 @@ for (const [view] of VIEWS) {
   test(`Kamera-Preset ${view}`, async ({ page }) => {
     await prepare(page);
     await select(page, view);
-    await expect(page.locator("canvas")).toHaveScreenshot(`${view}.png`, SHOT);
+    await renderOnly(page, () => expect(page.locator("canvas")).toHaveScreenshot(`${view}.png`, SHOT));
   });
 }
 
@@ -47,7 +57,7 @@ test("Kamera-Presets unterscheiden sich deutlich voneinander", async ({ page }) 
   for (const [view] of VIEWS) {
     await select(page, view);
     await page.waitForTimeout(500);
-    const shot = await page.locator("canvas").screenshot({ animations: "disabled" });
+    const shot = await renderOnly(page, () => page.locator("canvas").screenshot({ animations: "disabled" }));
     for (const [other] of VIEWS) {
       if (other === view) continue;
       expect(shot, `${view} vs ${other}`).not.toMatchSnapshot(`${other}.png`, { maxDiffPixelRatio: 0.015, threshold: SHOT.threshold });

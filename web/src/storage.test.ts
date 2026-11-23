@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { defaultParams } from "./api";
-import { KEYS, load, loadColors, loadDialect, loadParams, loadString, save } from "./storage";
+import { KEYS, load, loadColors, loadColorSettings, loadDialect, loadParams, loadString, loadTheme, save } from "./storage";
 
 beforeEach(() => localStorage.clear());
 
@@ -70,5 +70,31 @@ describe("loadColors", () => {
   it("gives an empty map for non-objects", () => {
     save(KEYS.colors, [1]);
     expect(loadColors()).toEqual({});
+  });
+});
+
+describe("loadColorSettings", () => {
+  it("moves a stored pick for the first open colour into params.color and drops it", () => {
+    save(KEYS.params, { ...defaultParams, yarn_mm: 3 });
+    save(KEYS.colors, { "A:#efe6d2": "#336699", "B:#c0392b": "#00ff00" });
+    expect(loadColorSettings()).toEqual({ params: { ...defaultParams, yarn_mm: 3, color: "#336699" }, picks: { "B:#c0392b": "#00ff00" } });
+  });
+  it("keeps params.color without such a pick", () => {
+    save(KEYS.params, { ...defaultParams, color: "#123456" });
+    expect(loadColorSettings().params.color).toBe("#123456");
+  });
+});
+
+describe("loadTheme", () => {
+  it("is dark by default and keeps a valid choice", () => {
+    expect(loadTheme()).toBe("dark");
+    save(KEYS.theme, "light");
+    expect(loadTheme()).toBe("light");
+    save(KEYS.theme, "system");
+    expect(loadTheme()).toBe("system");
+  });
+  it("falls back to dark for unknown values", () => {
+    save(KEYS.theme, "sepia");
+    expect(loadTheme()).toBe("dark");
   });
 });
