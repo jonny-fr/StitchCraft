@@ -81,15 +81,16 @@ uv run stitchcraft gate     # misst A1–A9 und schreibt docs/evaluation/m1.md
 
 `services/mcp` stellt den Kern als MCP-Server bereit. Tools: `validate_pattern` (Dialekt, Diagnosen
 mit Zeile/Spalte und Meldung in `ui_locale` de|en, Soll/Ist je Reihe), `parse_pattern` (IR als JSON),
-`render_preview` (GLB als Resource `stitchcraft://previews/{key}/model.glb`, Statistik; solange der
-Snapshot-Dienst fehlt, ohne PNG und mit Hinweis) und `list_stitches`. Vorschauen liegen im selben
-Cache wie bei der API.
+`render_preview` (GLB als Resource `stitchcraft://previews/{key}/model.glb`, Statistik und, wenn der
+Snapshot-Dienst läuft, ein PNG; sonst nur mit Hinweis) und `list_stitches`. Vorschauen liegen im selben
+Cache wie bei der API. Einbinden in Claude Code, Snapshot-Profil, Beispielsession: [`docs/mcp.md`](docs/mcp.md).
 
 ```sh
 uv run stitchcraft-mcp stdio                    # stdio
 uv run stitchcraft-mcp http --port 8765         # Streamable HTTP: http://localhost:8765/mcp
 docker compose up -d                            # mcp auf :8765 (Dienst `mcp`)
 docker compose run --rm -i mcp stdio            # stdio im Container (das Argument ist nötig)
+docker compose --profile snapshot up -d         # zusätzlich der PNG-Renderer (Playwright, nur intern)
 ```
 
 ## Tests
@@ -97,7 +98,8 @@ docker compose run --rm -i mcp stdio            # stdio im Container (das Argume
 ```sh
 uv run pytest                     # Kern + API + MCP (A3–A5, A7–A9 automatisiert)
 uv run pytest -m reference        # A1/A2 gegen Fotos in tests/reference (übersprungen ohne Fotos)
-cd web && pnpm test && pnpm typecheck
+cd web && pnpm test && pnpm typecheck && pnpm e2e
+cd services/snapshot && npm ci && npm test    # Renderer; echter Chromium-Lauf: SNAPSHOT_REAL=1 SNAPSHOT_KEY=<id> STITCHCRAFT_WEB_URL=…
 ```
 
 `?fps` an der UI-URL blendet einen FPS-Zähler ein (A9, Viewer ≥ 30 FPS).
@@ -108,6 +110,7 @@ cd web && pnpm test && pnpm typecheck
 packages/core/   stitchcraft_core: notation → ir → expand → graph → validate → sim → yarn → export
 services/api/    FastAPI (validate, parse, previews mit Datei-Cache)
 services/mcp/    MCP-Server (FastMCP/MCPServer; stdio + Streamable HTTP)
+services/snapshot/  Playwright-Renderer: PNG aus der Viewer-Seite (`/?snapshot=<key>`), Compose-Profil `snapshot`
 web/             React + react-three-fiber Viewer
 data/            Dialekt-Vokabular, Maschenbibliothek, Garnvorlagen (versioniert)
 tests/reference/ Referenzstücke für das M1-Gate (Fotos/Masken ergänzen, siehe README dort)
