@@ -75,4 +75,14 @@ jobs:
       - run: docker compose up -d --build --wait
       - run: curl -sf http://localhost:8080/ | grep -q "<title>Stitchcraft</title>"
       - run: curl -sf http://localhost:8080/api/v1/dialects
+      - name: MCP answers initialize on the Streamable HTTP endpoint
+        run: |
+          curl -sf http://localhost:8765/mcp \
+            -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+            -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"0"}}}' \
+            | grep -q '"serverInfo"'
+      - name: MCP answers initialize over stdio
+        run: |
+          echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"0"}}}' \
+            | timeout 60 docker compose run --rm -T mcp stdio | head -n1 | grep -q '"serverInfo"'
       - run: docker compose down

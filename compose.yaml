@@ -1,8 +1,10 @@
-# docker compose up  ->  http://localhost:8080
-# M1: api + web. The MCP server and the snapshot renderer follow in M4.
+# docker compose up  ->  UI http://localhost:8080, API :8000, MCP (Streamable HTTP) http://localhost:8765/mcp
+# MCP over stdio (Claude Code/Desktop):  docker compose run --rm -i mcp stdio
+# api and mcp share one image and the `cache` volume. The snapshot renderer follows in M4 (task 10).
 services:
   api:
-    build:
+    image: stitchcraft-server
+    build: &server-build
       context: .
       dockerfile: services/api/Dockerfile
     ports:
@@ -13,6 +15,21 @@ services:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
       interval: 10s
       timeout: 3s
+      retries: 5
+
+  mcp:
+    image: stitchcraft-server
+    build: *server-build
+    entrypoint: ["stitchcraft-mcp"]
+    command: ["http", "--host", "0.0.0.0"]  # `run --rm -i mcp stdio` replaces this
+    ports:
+      - "8765:8765"
+    volumes:
+      - cache:/cache
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 8765), 3)"]
+      interval: 10s
+      timeout: 5s
       retries: 5
 
   web:

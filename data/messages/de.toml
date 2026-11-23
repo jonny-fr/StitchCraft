@@ -1,0 +1,19 @@
+# Server-side texts (MCP); diagnostics must match web/src/i18n/locales (tested)
+[diagnostics]
+E_SYNTAX = "Zeile {{line}}: unverständliche Anweisung."
+W_PROSE = "Zeile {{line}}: Freitext, wird nicht simuliert."
+I_IGNORED = "Zeile {{line}}: Hinweis übernommen, ohne Einfluss auf die Form."
+E_COUNT_MISMATCH = "Runde/Reihe {{row}}: {{actual}} Maschen gezählt, angegeben sind {{expected}}."
+E_TOO_FEW_PARENTS = "Runde/Reihe {{row}}: braucht {{needed}} Maschen der Vorreihe, vorhanden sind {{available}}."
+W_UNWORKED = "Runde/Reihe {{row}}: {{left}} Maschen der Vorreihe bleiben unbehäkelt."
+E_EMPTY_PATTERN = "Die Anleitung enthält keine Maschen."
+E_TOO_LARGE = "Die Anleitung ist zu groß für die Vorschau (höchstens {{limit}} Maschen)."
+W_UNKNOWN_COLOR = "Zeile {{line}}: Farbe „{{name}}“ ist unbekannt, die Vorschau nimmt eine Ersatzfarbe."
+W_AMBIGUOUS_DIALECT = "Die Anleitung kann US- oder UK-Begriffe verwenden ({{candidates}}). Angenommen: {{chosen}} – bitte Dialekt wählen."
+W_GLOSSARY_UNKNOWN = "Zeile {{line}}: Abkürzung „{{abbr}}“ = „{{meaning}}“ ist unbekannt und wird ignoriert."
+
+[snapshot]
+unavailable = "Snapshot-Dienst nicht verfügbar: Es gibt nur das GLB-Modell und die Statistik, kein PNG."
+
+[preview]
+nothing = "Keine Maschen zum Simulieren gefunden."

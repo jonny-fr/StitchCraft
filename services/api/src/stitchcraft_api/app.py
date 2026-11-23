@@ -8,18 +8,16 @@ import os
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
-from dataclasses import asdict
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import Response, StreamingResponse
 from stitchcraft_core.data import load_toml
-from stitchcraft_core.export import encode_yarn_bin, glb_bytes, point_colors, shape_json
-from stitchcraft_core.notation import parse
+from stitchcraft_core.export import write_preview
 from stitchcraft_core.notation.dialect import available_dialects, load_dialect, vocabulary
 from stitchcraft_core.params import Params
 from stitchcraft_core.pipeline import cache_key, preview
-from stitchcraft_core.serialize import diagnostic_dict, validation_dict
+from stitchcraft_core.serialize import parse_dict, validation_dict
 from stitchcraft_core.validate import validate
 
 from stitchcraft_api.schemas import PatternIn, PreviewIn
@@ -103,31 +101,16 @@ def create_app(cache_dir: Path | None = None, max_jobs: int | None = None) -> Fa
 
     @app.post("/api/v1/parse")
     def parse_pattern(body: PatternIn) -> dict:
-        result = parse(body.text, dialect=body.dialect)
-        return {
-            "pattern": json.loads(json.dumps(asdict(result.pattern), default=str)),
-            "diagnostics": [diagnostic_dict(d) for d in result.diagnostics],
-        }
+        return parse_dict(body.text, body.dialect)
 
     jobs: dict[str, _Job] = {}
     jobs_lock = threading.Lock()
 
     def _run(job: _Job, body: PreviewIn, params: Params, key: str) -> None:
-        target = cache / key
         try:
             result = preview(body.text, body.dialect, params, key, progress=job.report)
             job.report("export", 0.9)
-            target.mkdir(parents=True, exist_ok=True)
-            (target / "yarn.bin").write_bytes(encode_yarn_bin(result.yarn))
-            (target / "model.glb").write_bytes(glb_bytes(result.yarn, 8, point_colors(result)))
-            (target / "shape.json").write_text(json.dumps(shape_json(result)))
-            out = {
-                "id": key,
-                "status": "done",
-                "stats": result.stats,
-                "diagnostics": [diagnostic_dict(d) for d in result.validation.diagnostics],
-            }
-            (target / "meta.json").write_text(json.dumps(out))  # last: marks the preview complete
+            write_preview(result, cache)
             job.finish()
         except Exception as exc:  # reported to the client as event: error
             job.fail(str(exc) or type(exc).__name__)

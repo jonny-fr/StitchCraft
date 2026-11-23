@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import json
 import struct
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
 
 from stitchcraft_core import colors
+from stitchcraft_core.serialize import diagnostic_dict
 from stitchcraft_core.yarn import YarnPath
 
 if TYPE_CHECKING:
@@ -150,3 +153,21 @@ def shape_json(p: Preview) -> dict:
         "stitches": stitches,
         "rows": rows,
     }
+
+
+def write_preview(p: Preview, cache_dir: Path) -> dict:
+    """Write yarn.bin, model.glb, shape.json and, last, meta.json (marks it complete) to
+    `<cache_dir>/<key>/`; returns the meta."""
+    target = cache_dir / p.key
+    target.mkdir(parents=True, exist_ok=True)
+    (target / "yarn.bin").write_bytes(encode_yarn_bin(p.yarn))
+    (target / "model.glb").write_bytes(glb_bytes(p.yarn, 8, point_colors(p)))
+    (target / "shape.json").write_text(json.dumps(shape_json(p)))
+    meta = {
+        "id": p.key,
+        "status": "done",
+        "stats": p.stats,
+        "diagnostics": [diagnostic_dict(d) for d in p.validation.diagnostics],
+    }
+    (target / "meta.json").write_text(json.dumps(meta))
+    return meta

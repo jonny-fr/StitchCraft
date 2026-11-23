@@ -2,7 +2,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
-const API_PORT = 8765;
+const API_PORT = 8766;
 const WEB_PORT = 5199;
 // fresh cache per run, so previews are computed (and report progress) instead of served from disk
 const CACHE = join(tmpdir(), "stitchcraft-e2e-cache");

@@ -3,17 +3,18 @@ name = "stitchcraft"
 version = "0.1.0"
 description = "Crochet patterns in, realistic 3D previews out"
 requires-python = ">=3.14,<3.15"
-dependencies = ["stitchcraft-core", "stitchcraft-api"]
+dependencies = ["stitchcraft-core", "stitchcraft-api", "stitchcraft-mcp"]
 
 [tool.uv]
 package = false
 
 [tool.uv.workspace]
-members = ["packages/core", "services/api"]
+members = ["packages/core", "services/api", "services/mcp"]
 
 [tool.uv.sources]
 stitchcraft-core = { workspace = true }
 stitchcraft-api = { workspace = true }
+stitchcraft-mcp = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -26,7 +27,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["packages/core/tests", "services/api/tests"]
+testpaths = ["packages/core/tests", "services/api/tests", "services/mcp/tests"]
 markers = [
     "reference: compares against photographed reference pieces in tests/reference (skipped when data is missing)",
     "slow: longer simulation runs",
@@ -45,5 +46,5 @@ python_version = "3.14"
 strict = false
 warn_unused_ignores = true
 ignore_missing_imports = true
-files = ["packages/core/src", "services/api/src"]
+files = ["packages/core/src", "services/api/src", "services/mcp/src"]
 plugins = ["pydantic.mypy"]

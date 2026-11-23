@@ -7,12 +7,15 @@ WORKDIR /app
 COPY pyproject.toml uv.lock .python-version ./
 COPY packages/core/pyproject.toml packages/core/pyproject.toml
 COPY services/api/pyproject.toml services/api/pyproject.toml
+COPY services/mcp/pyproject.toml services/mcp/pyproject.toml
 RUN mkdir -p packages/core/src/stitchcraft_core services/api/src/stitchcraft_api \
- && uv sync --frozen --no-dev --no-install-workspace --package stitchcraft-api
+    services/mcp/src/stitchcraft_mcp \
+ && uv sync --frozen --no-dev --no-install-workspace --package stitchcraft-mcp
 COPY data data
 COPY packages/core packages/core
 COPY services/api services/api
-RUN uv sync --frozen --no-dev --package stitchcraft-api
-EXPOSE 8000
+COPY services/mcp services/mcp
+RUN uv sync --frozen --no-dev --package stitchcraft-mcp
+EXPOSE 8000 8765
 VOLUME /cache
 CMD ["uvicorn", "stitchcraft_api.app:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import json
+from dataclasses import asdict
+
 from stitchcraft_core.ir import Diagnostic
+from stitchcraft_core.notation import parse
 from stitchcraft_core.validate import ValidationResult
 
 
@@ -20,4 +24,13 @@ def validation_dict(v: ValidationResult) -> dict:
         "total_stitches": v.total_stitches,
         "diagnostics": [diagnostic_dict(d) for d in v.diagnostics],
         "rows": v.rows,
+    }
+
+
+def parse_dict(text: str, dialect: str = "auto") -> dict:
+    """The parsed IR plus diagnostics, as served by `/parse` and the MCP `parse_pattern`."""
+    result = parse(text, dialect=dialect)
+    return {
+        "pattern": json.loads(json.dumps(asdict(result.pattern), default=str)),
+        "diagnostics": [diagnostic_dict(d) for d in result.diagnostics],
     }
