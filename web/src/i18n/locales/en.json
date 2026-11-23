@@ -48,6 +48,7 @@
       "badVersion": "This file version is not supported."
     },
     "stage": {
+      "queued": "Waiting for a free worker",
       "validate": "Checking pattern",
       "shape": "Computing shape",
       "yarn": "Laying yarn",

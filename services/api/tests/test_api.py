@@ -64,7 +64,7 @@ def test_preview_runs_in_background_and_streams_progress(client):
     names = [n for n, _ in events]
     assert names[-1] == "done" and events[-1][1] == {"id": pid}
     stages = [d["stage"] for n, d in events if n == "progress"]
-    assert stages[:3] == ["validate", "shape", "yarn"] and "export" in stages
+    assert stages[:4] == ["queued", "validate", "shape", "yarn"] and "export" in stages
     fractions = [d["fraction"] for n, d in events if n == "progress"]
     assert fractions == sorted(fractions) and fractions[-1] == 1.0
     assert client.get(f"/api/v1/previews/{pid}/yarn.bin").content[:4] == b"SCYN"
@@ -188,3 +188,37 @@ def test_validate_rows_carry_their_source_line(client):
         "/api/v1/validate", json={"text": "\n6 fM in MR\nRd. 2-3: 6 fM", "dialect": "de"}
     )
     assert [row["line"] for row in r.json()["rows"]] == [2, 3, 3]
+
+
+def test_concurrent_jobs_are_bounded(tmp_path, monkeypatch):
+    import threading
+
+    import stitchcraft_api.app as app_module
+
+    real = app_module.preview
+    lock = threading.Lock()
+    state = {"now": 0, "peak": 0}
+
+    def tracked(*args, **kwargs):
+        with lock:
+            state["now"] += 1
+            state["peak"] = max(state["peak"], state["now"])
+        try:
+            time.sleep(0.15)
+            return real(*args, **kwargs)
+        finally:
+            with lock:
+                state["now"] -= 1
+
+    monkeypatch.setattr(app_module, "preview", tracked)
+    client = TestClient(create_app(cache_dir=tmp_path, max_jobs=2))
+    ids = [
+        client.post("/api/v1/previews", json={**BODY, "params": {"fill": 0.1 * i}}).json()["id"]
+        for i in range(1, 6)
+    ]
+    assert len(set(ids)) == 5
+    first = sse(client.get(f"/api/v1/previews/{ids[-1]}/events").text)
+    assert first[0] == ("progress", {"stage": "queued", "fraction": 0.0})
+    for pid in ids:
+        assert sse(client.get(f"/api/v1/previews/{pid}/events").text)[-1] == ("done", {"id": pid})
+    assert state["peak"] == 2

@@ -6,6 +6,8 @@ import asyncio
 import json
 import os
 import threading
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import asynccontextmanager
 from dataclasses import asdict
 from pathlib import Path
 
@@ -60,10 +62,19 @@ class _Job:
             return self._events[seen:], self._finished
 
 
-def create_app(cache_dir: Path | None = None) -> FastAPI:
+def create_app(cache_dir: Path | None = None, max_jobs: int | None = None) -> FastAPI:
     cache = Path(cache_dir or os.environ.get("STITCHCRAFT_CACHE", ".cache/previews"))
     cache.mkdir(parents=True, exist_ok=True)
-    app = FastAPI(title="Stitchcraft API", version="0.1.0")
+    # relaxations are CPU-bound: run a few at a time, the rest wait as "queued"
+    workers = max_jobs or int(os.environ.get("STITCHCRAFT_JOBS", "2"))
+    executor = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="preview")
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
+        yield
+        executor.shutdown(wait=False, cancel_futures=True)
+
+    app = FastAPI(title="Stitchcraft API", version="0.1.0", lifespan=lifespan)
 
     @app.get("/api/v1/health")
     def health() -> dict:
@@ -137,7 +148,8 @@ def create_app(cache_dir: Path | None = None) -> FastAPI:
             job = jobs.get(key)
             if job is None or job.error is not None:
                 job = jobs[key] = _Job(key)
-                threading.Thread(target=_run, args=(job, body, params, key), daemon=True).start()
+                job.report("queued", 0.0)
+                executor.submit(_run, job, body, params, key)
         return {"id": key, "status": "running", "cached": False}
 
     def _file(pid: str, name: str) -> Path:

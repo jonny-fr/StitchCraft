@@ -48,6 +48,7 @@
       "badVersion": "Diese Dateiversion wird nicht unterstützt."
     },
     "stage": {
+      "queued": "Wartet auf Berechnung",
       "validate": "Prüfe Anleitung",
       "shape": "Berechne Form",
       "yarn": "Lege Garn",
