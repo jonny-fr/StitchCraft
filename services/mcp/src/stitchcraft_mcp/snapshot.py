@@ -7,10 +7,13 @@ GLB resource and statistics plus a note instead of failing. A configured but bro
 
 from __future__ import annotations
 
+import json
 import os
+from functools import cache as memo
 from pathlib import Path
 
 import httpx
+from stitchcraft_core.data import data_dir
 
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 CONNECT_TIMEOUT = 2.0  # compose sets the URL even when the profile is off: fail fast on DNS/refused
@@ -28,8 +31,22 @@ def render_timeout() -> float:
     return float(os.environ.get("STITCHCRAFT_SNAPSHOT_TIMEOUT", "90"))
 
 
+@memo
+def render_version() -> int:
+    """Version of the viewer's look (`data/render.json`, shared with the web build).
+
+    Part of the PNG path: after a change to the renderer, cached previews get a fresh snapshot.
+    """
+    return int(json.loads((data_dir() / "render.json").read_text(encoding="utf-8"))["version"])
+
+
+def png_name(color: str, view: str) -> str:
+    """PNG path inside a preview's cache directory."""
+    return f"snapshots/r{render_version()}/{color}-{view}.png"
+
+
 def png_path(cache: Path, key: str, color: str, view: str) -> Path:
-    return cache / key / "snapshots" / f"{color}-{view}.png"
+    return cache / key / png_name(color, view)
 
 
 async def render_png(cache: Path, key: str, view: str, color: str, material: str) -> bytes | None:

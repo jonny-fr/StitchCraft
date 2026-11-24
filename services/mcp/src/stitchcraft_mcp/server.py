@@ -255,7 +255,7 @@ def create_server(cache_dir: Path | None = None) -> MCPServer:
         """PNG snapshot of a preview in yarn colour `color` (6 hex digits) from `view`."""
         if not COLOR.fullmatch(color) or view not in VIEWS:
             raise ValueError(f"unknown snapshot {color}/{view}")
-        return _read(key, f"snapshots/{color}-{view}.png")
+        return _read(key, snapshot.png_name(color, view))
 
     def _read(key: str, name: str) -> bytes:
         path = cache / key / name

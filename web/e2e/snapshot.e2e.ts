@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 import { ASYMMETRIC, createPreview, SPHERE } from "./helpers";
 
@@ -42,6 +43,9 @@ test("Snapshot-Modus zeigt nur das Garn und meldet Bereitschaft", async ({ page 
   const shot = await snapshot(page, `snapshot=${id}&view=front&color=c0392b&material=cotton`);
   await expect(page.locator("canvas")).toBeVisible();
   await expect(page.locator("[data-snapshot]")).toHaveAttribute("data-snapshot", "ready");
+  // the same look version as the MCP's PNG cache path
+  const { version } = JSON.parse(readFileSync(new URL("../../data/render.json", import.meta.url), "utf8"));
+  await expect(page.locator("[data-snapshot]")).toHaveAttribute("data-render-version", String(version));
   // no editor, buttons or inputs: the page is canvas only
   await expect(page.locator("button, input, textarea, .cm-content, header")).toHaveCount(0);
 
@@ -67,6 +71,7 @@ test("Unbekannter Schlüssel und ungültige Parameter melden error", async ({ pa
 });
 
 test("Zwei Snapshots derselben Eingabe sind pixelgleich, mit Ply-Normal-Map und Faserflaum", async ({ page }) => {
+  test.setTimeout(180_000); // three SwiftShader renders
   const id = await createPreview(page, SPHERE);
   const query = `snapshot=${id}&view=iso&color=c0392b&material=mohair`;
   const first = await snapshot(page, query);

@@ -6,6 +6,7 @@ COPY web/package.json web/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY web ./
 COPY tests/reference /src/tests/reference
+COPY data/render.json /src/data/render.json
 RUN pnpm build
 
 FROM nginx:1.29-alpine

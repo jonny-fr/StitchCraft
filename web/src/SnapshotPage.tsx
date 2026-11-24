@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import render from "../../data/render.json";
 import { loadPreview, type PreviewResult } from "./api";
 import { paletteColors } from "./colors";
 import type { SnapshotQuery } from "./snapshot";
@@ -51,7 +52,8 @@ export default function SnapshotPage({ query }: { query: SnapshotQuery }) {
   }, [result, query.color]);
 
   return (
-    <div data-snapshot={status} style={{ position: "fixed", inset: 0, background: BACKGROUND, ["--viewer-bg" as string]: BACKGROUND }}>
+    // the render version keys the MCP's PNG cache (services/mcp snapshot.py); bump it in data/render.json when the look changes
+    <div data-snapshot={status} data-render-version={render.version} style={{ position: "fixed", inset: 0, background: BACKGROUND, ["--viewer-bg" as string]: BACKGROUND }}>
       {result && (
         <Viewer
           yarn={result.yarn}

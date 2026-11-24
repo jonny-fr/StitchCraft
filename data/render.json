@@ -1,0 +1,4 @@
+{
+  "//": "Version of the viewer look (web/src/viewer): bump it whenever rendered PNGs change, so cached MCP snapshots are rendered again.",
+  "version": 2
+}

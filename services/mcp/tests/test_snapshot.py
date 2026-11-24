@@ -6,6 +6,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import pytest
 from mcp.client import Client
+from stitchcraft_mcp import snapshot
 from stitchcraft_mcp.server import create_server
 
 from .samples import TINY
@@ -76,7 +77,7 @@ async def test_png_is_returned_as_image_content_and_cached(client, cache, fake):
     assert fake.requests == [
         {"key": out["id"], "view": "front", "color": "efe6d2", "material": "cotton"}
     ]
-    assert (cache / out["id"] / "snapshots" / "efe6d2-front.png").read_bytes() == PNG
+    assert (cache / out["id"] / snapshot.png_name("efe6d2", "front")).read_bytes() == PNG
 
     again = await call(client)
     assert again.structured_content["cached"] is True
@@ -186,7 +187,26 @@ async def test_png_resource_rejects_bad_parameters(cache, fake):
 
 
 async def test_png_resource_does_not_serve_from_a_foreign_key(client, cache, fake):
-    (cache / "abc123" / "snapshots").mkdir(parents=True)
-    (cache / "abc123" / "snapshots" / "efe6d2-front.png").write_bytes(PNG)
+    png = cache / "abc123" / snapshot.png_name("efe6d2", "front")
+    png.parent.mkdir(parents=True)
+    png.write_bytes(PNG)
     with pytest.raises(Exception):  # noqa: B017 - no meta.json: not a finished preview
         await client.read_resource("stitchcraft://previews/abc123/efe6d2/front.png")
+
+
+async def test_png_is_rendered_again_after_the_look_changed(client, cache, fake, monkeypatch):
+    await call(client)
+    assert len(fake.requests) == 1
+    await call(client)
+    assert len(fake.requests) == 1  # cached
+    # a new web build with a changed look bumps data/render.json
+    version = snapshot.render_version()
+    monkeypatch.setattr(snapshot, "render_version", lambda: version + 1)
+    await call(client)
+    assert len(fake.requests) == 2  # the PNG of the old look is not served
+
+
+def test_render_version_is_part_of_the_png_path():
+    assert snapshot.render_version() >= 2
+    version = snapshot.render_version()
+    assert snapshot.png_name("efe6d2", "front") == f"snapshots/r{version}/efe6d2-front.png"
