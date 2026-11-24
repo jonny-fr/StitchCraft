@@ -149,5 +149,25 @@
     },
     "color": "Garnfarbe",
     "more": "Mehr"
+  },
+  "time": {
+    "label": "Häkelzeit",
+    "note": "Geschätzte Häkelzeit, ohne Ausstopfen, Zusammennähen und Fäden vernähen.",
+    "min": "≈ {{value}} min",
+    "minRange": "≈ {{low}}–{{high}} min",
+    "hour": "≈ {{value}} h",
+    "hourRange": "≈ {{low}}–{{high}} h",
+    "half": "½",
+    "lessThanMinute": "< 1 min",
+    "upTo": "bis hier {{time}}",
+    "pace": "Tempo",
+    "paces": {
+      "anfaenger": "Anfänger",
+      "geuebt": "Geübt",
+      "schnell": "Schnell"
+    },
+    "ownPace": "Eigenes Tempo (M/min)",
+    "ownPaceHint": "Selbst gemessene feste Maschen pro Minute mit diesem Garn; ersetzt Tempo und Garnfaktor. Andere Maschen dauern im Verhältnis der Tabelle länger oder kürzer.",
+    "perRow": "Nach Runden/Reihen"
   }
 }

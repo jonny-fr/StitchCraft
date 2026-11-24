@@ -13,6 +13,7 @@ import {
   segment,
   SPHERE,
   startApp,
+  timeChip,
   typePattern,
 } from "./helpers";
 
@@ -40,12 +41,18 @@ function visibleControls(page: Page): Promise<number> {
 }
 
 test.describe("U1 Übersicht", () => {
-  test("beim ersten Laden höchstens 8 sichtbare Bedienelemente außerhalb des Editors", async ({ page }) => {
+  const firstLoad = async (page: Page) => {
     await startApp(page);
     await expect(page.locator(".status-bar")).toHaveText(/Keine Probleme/);
+    await expect(timeChip(page)).toBeVisible(); // the time chip counts too
     const n = await visibleControls(page);
     test.info().annotations.push({ type: "Bedienelemente", description: String(n) });
     expect(n).toBeLessThanOrEqual(8);
+  };
+  test("beim ersten Laden höchstens 8 sichtbare Bedienelemente außerhalb des Editors", async ({ page }) => firstLoad(page));
+  test.describe("mobil", () => {
+    test.use({ viewport: { width: 375, height: 812 } });
+    test("auch bei 375 px höchstens 8", async ({ page }) => firstLoad(page));
   });
 });
 
@@ -127,6 +134,21 @@ test.describe("U2 Erreichbarkeit", () => {
     await click(menuButton(page));
     await page.getByLabel("Sprache").selectOption("en");
     await expect(page.getByRole("button", { name: "3D preview" })).toBeVisible();
+  });
+
+  test("Tempo der Häkelzeit", async ({ page }) => {
+    await startApp(page);
+    const before = await timeChip(page).textContent();
+    await click(timeChip(page));
+    await click(page.getByRole("button", { name: "Anfänger" }));
+    await expect(timeChip(page)).not.toHaveText(before!);
+  });
+
+  test("Eigenes Tempo", async ({ page }) => {
+    await startApp(page);
+    await click(timeChip(page));
+    await page.getByLabel("Eigenes Tempo").fill("12");
+    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("stitchcraft.pace")!).stitchesPerMinute)).toBe(12);
   });
 
   test("Theme", async ({ page }) => {
@@ -295,7 +317,7 @@ test.describe("U6 Tastatur und A11y", () => {
     await runPreview(page);
     const triggers = [
       segment(page, "Dialekt"), segment(page, "Garn"), segment(page, "Farben"), menuButton(page),
-      page.getByRole("button", { name: "Werkzeuge" }), page.getByRole("button", { name: "Export", exact: true }),
+      page.getByRole("button", { name: "Werkzeuge" }), page.getByRole("button", { name: "Export", exact: true }), timeChip(page),
     ];
     for (const trigger of triggers) {
       await expect(trigger).toHaveAttribute("aria-haspopup", "dialog");
@@ -330,6 +352,10 @@ test.describe("U6 Tastatur und A11y", () => {
       await runPreview(page);
       await openPopover(page, page.getByRole("button", { name: "Werkzeuge" }));
       expect(await serious()).toEqual([]);
+      // the time popover with pace, own pace and the rows
+      await closePopover(page);
+      await openPopover(page, timeChip(page));
+      expect(await serious()).toEqual([]);
     });
   }
 });
@@ -357,7 +383,10 @@ test.describe("U7 Mobil", () => {
     await page.mouse.click(180, 40);
     await expect(page.getByRole("dialog")).toHaveCount(0);
 
-    await runPreview(page);
+    // no preview button on small screens: the 3D tab computes the preview
+    await expect(page.getByRole("button", { name: "3D-Vorschau" })).toBeHidden();
+    await page.getByRole("button", { name: "3D", exact: true }).click();
+    await expect(page.locator("canvas")).toBeVisible({ timeout: 60_000 });
     await expect(page.getByRole("button", { name: "3D", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(page.locator("canvas")).toBeVisible();
     await expect(editor(page)).toBeHidden();

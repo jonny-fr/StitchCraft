@@ -1,19 +1,21 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
-import { ApiError, fetchVocabulary, paramsValid, requestPreview, validate, type Diagnostic, type Params, type PreviewResult, type Progress, type Validation } from "./api";
+import { ApiError, fetchVocabulary, paramsValid, requestPreview, validate, type Diagnostic, type Params, type PreviewResult, type Progress, type Timing, type Validation } from "./api";
 import { paletteColors, type ColorPicks, type ColorState } from "./colors";
 import { dialectLabel } from "./dialects";
 import { PatternEditor, type EditorHandle } from "./editor/PatternEditor";
 import type { Word } from "./editor/language";
 import { samples } from "./samples";
 import { parseStitchFile, serializeStitchFile, stitchFileName } from "./stitchFile";
-import { KEYS, loadColorSettings, loadDialect, loadString, loadTheme, save } from "./storage";
+import { KEYS, loadColorSettings, loadDialect, loadPace, loadString, loadTheme, save } from "./storage";
 import { applyTheme, useDarkScheme, type Theme } from "./theme";
+import { formatDuration, secondsUpTo, type PaceSetting } from "./time";
 import { ContextPill } from "./ui/ContextPill";
 import { Header } from "./ui/Header";
 import { Menu } from "./ui/Menu";
 import { StatusBar } from "./ui/StatusBar";
+import { TimeChip } from "./ui/TimeChip";
 import { ViewerOverlay } from "./ui/ViewerOverlay";
 import { Viewer, type View, type ViewerHandle } from "./viewer/Viewer";
 
@@ -33,9 +35,12 @@ export default function App() {
   // colours picked for palette entries other than the first open one (that one is params.color)
   const [colorPicks, setColorPicks] = useState<ColorPicks>(initial.picks);
   const [theme, setTheme] = useState<Theme>(loadTheme);
+  const [pace, setPace] = useState<PaceSetting>(loadPace);
   const dark = useDarkScheme(theme);
   const [validation, setValidation] = useState<Validation | null>(null);
   const [result, setResult] = useState<PreviewResult | null>(null);
+  // what the shown preview was computed from (see previewInput)
+  const [previewed, setPreviewed] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<Progress | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -56,6 +61,7 @@ export default function App() {
   useEffect(() => save(KEYS.dialect, dialect), [dialect]);
   useEffect(() => save(KEYS.params, params), [params]);
   useEffect(() => save(KEYS.colors, colorPicks), [colorPicks]);
+  useEffect(() => save(KEYS.pace, pace), [pace]);
   useEffect(() => {
     applyTheme(theme);
     save(KEYS.theme, theme);
@@ -63,14 +69,19 @@ export default function App() {
   useEffect(() => void (document.documentElement.lang = i18n.language), [i18n.language]);
   useEffect(() => () => void (overlay && URL.revokeObjectURL(overlay)), [overlay]);
 
-  // live lint, debounced
+  // live lint and time estimate, debounced; invalid params leave the yarn factor at its default
+  const paramsOk = paramsValid(params);
+  const timing = useMemo<Timing>(
+    () => ({ yarn: paramsOk ? { yarn_mm: params.yarn_mm, material: params.material } : null, pace }),
+    [paramsOk, params.yarn_mm, params.material, pace],
+  );
   useEffect(() => {
     const ctrl = new AbortController();
     const id = setTimeout(() => {
-      validate(text, dialect, ctrl.signal).then(setValidation).catch(() => undefined);
+      validate(text, dialect, timing, ctrl.signal).then(setValidation).catch(() => undefined);
     }, 250);
     return () => (clearTimeout(id), ctrl.abort());
-  }, [text, dialect]);
+  }, [text, dialect, timing]);
 
   // vocabulary for highlighting and hover: the chosen dialect, or the detected one
   const wordsDialect = dialect === "auto" ? (validation?.dialect ?? "de") : dialect;
@@ -83,6 +94,8 @@ export default function App() {
   const ambiguous = validation?.diagnostics.find((d) => d.code === "W_AMBIGUOUS_DIALECT");
 
   const message = (d: Diagnostic) => t(`diagnostics.${d.code}`, { ...d.params, line: d.span?.line });
+  // the colour is applied by the viewer, so it does not make a preview stale
+  const previewInput = JSON.stringify([text, dialect, { ...params, color: null }]);
   const runPreview = useCallback(async () => {
     setBusy(true);
     setError(null);
@@ -90,6 +103,7 @@ export default function App() {
     try {
       const r = await requestPreview(text, dialect, params, setProgress);
       setResult(r);
+      setPreviewed(previewInput);
       setSelected(null);
       setMaxRow(Math.max(...r.shape.rows.map((row) => row.number)));
       setTab("viewer");
@@ -100,7 +114,12 @@ export default function App() {
       setBusy(false);
       setProgress(null);
     }
-  }, [text, dialect, params, t]);
+  }, [text, dialect, params, previewInput, t]);
+  // small screens have no preview button: the 3D tab computes the preview when it is missing or stale
+  const openViewer = () => {
+    if (!busy && paramsOk && previewed !== previewInput) void runPreview();
+    else setTab("viewer");
+  };
 
   const stitchById = useMemo(() => new Map(result?.shape.stitches.map((s) => [s.id, s]) ?? []), [result]);
   const rowOf = useMemo(() => new Map(result?.shape.stitches.map((s) => [s.id, s.row]) ?? []), [result]);
@@ -128,7 +147,7 @@ export default function App() {
   };
 
   const exportFile = () => {
-    const blob = new Blob([serializeStitchFile({ text, dialect, params, colors: colorPicks })], { type: "application/json" });
+    const blob = new Blob([serializeStitchFile({ text, dialect, params, colors: colorPicks, pace })], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     download(url, stitchFileName(text));
     URL.revokeObjectURL(url);
@@ -141,11 +160,14 @@ export default function App() {
     setDialect(parsed.file.dialect);
     setParams(parsed.file.params);
     setColorPicks(parsed.file.colors);
+    if (parsed.file.pace) setPace(parsed.file.pace);
   };
   const setOverlayFile = (f: File | null) => setOverlay(f ? URL.createObjectURL(f) : null);
 
-  const paramsOk = paramsValid(params);
   const stats = result?.shape.stats;
+  const estimate = validation?.time_estimate;
+  const stage = progress ? t(`app.stage.${progress.stage}`, { defaultValue: progress.stage }) : t("app.computing");
+  const timeChip = (className: string) => <TimeChip estimate={estimate} pace={pace} onPace={setPace} className={className} />;
 
   const editorPane = (
     <section className="editor">
@@ -174,8 +196,9 @@ export default function App() {
         />
       </div>
       <StatusBar validation={validation} message={message} onPick={(d) => d.span && editor.current?.select(d.span.start, d.span.end)} />
+      {timeChip("editor-time")}
       <button className="primary" disabled={busy || !paramsOk} onClick={runPreview}>
-        {busy ? (progress ? t(`app.stage.${progress.stage}`, { defaultValue: progress.stage }) : t("app.computing")) : t("app.preview")}
+        {busy ? stage : t("app.preview")}
         {busy && <progress max={1} value={progress?.fraction} aria-label={t("app.computing")} />}
       </button>
       {!paramsOk && <p className="error">{t("app.invalidParams")}</p>}
@@ -206,6 +229,7 @@ export default function App() {
           )}
           {overlay && <img className="overlay" src={overlay} style={{ opacity: overlayOpacity }} alt="" />}
         </div>
+        {!result && <div className="viewer-bottom">{timeChip("viewer-time")}</div>}
         {result && stats && (
           <ViewerOverlay
             stats={stats}
@@ -215,6 +239,8 @@ export default function App() {
             rowNumbers={rowNumbers}
             maxRow={maxRow}
             onMaxRow={setMaxRow}
+            timeUpTo={estimate ? t("time.upTo", { time: formatDuration(t, secondsUpTo(estimate, maxRow)) }) : null}
+            corner={timeChip("viewer-time")}
             overlay={overlay}
             onOverlay={setOverlayFile}
             overlayOpacity={overlayOpacity}
@@ -256,7 +282,9 @@ export default function App() {
       />
       <nav className="tabs segmented" aria-label={t("app.tabs")}>
         <button aria-pressed={tab === "editor"} onClick={() => setTab("editor")}>{t("app.editorTab")}</button>
-        <button aria-pressed={tab === "viewer"} onClick={() => setTab("viewer")}>{t("app.viewerTab")}</button>
+        <button aria-pressed={tab === "viewer"} onClick={openViewer} data-busy={busy || undefined} style={{ "--progress": progress?.fraction ?? 0 } as CSSProperties}>
+          {busy ? stage : t("app.viewerTab")}
+        </button>
       </nav>
       {/* one tree for every width, so crossing the breakpoint keeps the editor state and the camera */}
       <PanelGroup direction="horizontal" autoSaveId="stitchcraft.split" className="split">

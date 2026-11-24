@@ -42,6 +42,14 @@ describe("stitch file", () => {
     const r = parseStitchFile('{"format":"stitchcraft","version":1,"text":"x"}');
     expect(r.ok && r.file.params).toEqual(defaultParams);
   });
+  it("carries the pace as an optional field", () => {
+    const withPace = { ...file, pace: { pace: "schnell" as const, stitchesPerMinute: 20 } };
+    expect(parseStitchFile(serializeStitchFile(withPace))).toEqual({ ok: true, file: withPace });
+    const r = parseStitchFile('{"format":"stitchcraft","version":1,"text":"x"}');
+    expect(r.ok && "pace" in r.file).toBe(false); // older files keep the current pace
+    const bad = parseStitchFile('{"format":"stitchcraft","version":1,"text":"x","pace":{"pace":"turbo"}}');
+    expect(bad.ok && bad.file.pace).toEqual({ pace: "geuebt", stitchesPerMinute: null });
+  });
 });
 
 describe("stitchFileName", () => {

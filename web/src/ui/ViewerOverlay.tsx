@@ -1,4 +1,5 @@
 import { Download, SlidersHorizontal } from "lucide-react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { StitchInfo, Stats } from "../api";
 import { VIEWS } from "../snapshot";
@@ -13,6 +14,10 @@ interface Props {
   rowNumbers: number[];
   maxRow: number;
   onMaxRow(row: number): void;
+  /** "up to here ≈ x min" for the slider, while a time estimate exists. */
+  timeUpTo: string | null;
+  /** The bottom right corner: the time chip. */
+  corner: ReactNode;
   overlay: string | null;
   onOverlay(file: File | null): void;
   overlayOpacity: number;
@@ -25,7 +30,7 @@ interface Props {
 
 /**
  * Controls floating over the canvas: statistics and the picked stitch top left, tools and export top right,
- * views and the row slider bottom centre. The bottom right corner stays free.
+ * views and the row slider bottom centre, the time chip (`corner`) bottom right.
  */
 export function ViewerOverlay(props: Props) {
   const { t } = useTranslation();
@@ -93,22 +98,28 @@ export function ViewerOverlay(props: Props) {
         </Popover>
       </div>
 
-      <div className="chip dock">
-        <div className="segmented" role="group" aria-label={t("app.views")}>
-          {VIEWS.map((v) => (
-            <button key={v} aria-pressed={view === v} onClick={() => props.onView(v)}>{t(`app.${v}`)}</button>
-          ))}
+      <div className="viewer-bottom">
+        <div className="chip dock">
+          <div className="segmented" role="group" aria-label={t("app.views")}>
+            {VIEWS.map((v) => (
+              <button key={v} aria-pressed={view === v} onClick={() => props.onView(v)}>{t(`app.${v}`)}</button>
+            ))}
+          </div>
+          <div className="dock-slider">
+            <label>
+              {t("app.showUpToRow", { row: Math.min(maxRow, last) })}
+              <input
+                type="range"
+                min={rowNumbers[0] ?? 1}
+                max={last}
+                value={Math.min(maxRow, last)}
+                onChange={(e) => props.onMaxRow(Number(e.target.value))}
+              />
+            </label>
+            {props.timeUpTo && <span className="time-up-to">{props.timeUpTo}</span>}
+          </div>
         </div>
-        <label>
-          {t("app.showUpToRow", { row: Math.min(maxRow, last) })}
-          <input
-            type="range"
-            min={rowNumbers[0] ?? 1}
-            max={last}
-            value={Math.min(maxRow, last)}
-            onChange={(e) => props.onMaxRow(Number(e.target.value))}
-          />
-        </label>
+        {props.corner}
       </div>
     </>
   );

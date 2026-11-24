@@ -79,6 +79,9 @@ export async function createPreview(page: Page, lines: string[]): Promise<string
 /** A segment of the context pill ("Dialekt", "Garn", "Farben"); its name is the title plus the current value. */
 export const segment = (page: Page, title: string) => page.getByRole("button", { name: new RegExp(`^${title}(\\s|$)`) });
 
+/** The time chip that is visible at the current width (viewer bottom right, or under the editor on small screens). */
+export const timeChip = (page: Page) => page.getByRole("button", { name: /^Häkelzeit/ });
+
 export const menuButton = (page: Page) => page.getByRole("button", { name: /^(Menü|Menu)$/ });
 
 /** Clicks a popover trigger and returns the panel it opened. */

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { defaultParams } from "./api";
-import { KEYS, load, loadColors, loadColorSettings, loadDialect, loadParams, loadString, loadTheme, save } from "./storage";
+import { KEYS, load, loadColors, loadColorSettings, loadDialect, loadPace, loadParams, loadString, loadTheme, save } from "./storage";
 
 beforeEach(() => localStorage.clear());
 
@@ -104,5 +104,17 @@ describe("loadTheme", () => {
   it("falls back to dark for unknown values", () => {
     save(KEYS.theme, "sepia");
     expect(loadTheme()).toBe("dark");
+  });
+});
+
+describe("loadPace", () => {
+  it("is practised without an own pace by default", () => expect(loadPace()).toEqual({ pace: "geuebt", stitchesPerMinute: null }));
+  it("keeps a stored pace and own pace", () => {
+    save(KEYS.pace, { pace: "anfaenger", stitchesPerMinute: 14 });
+    expect(loadPace()).toEqual({ pace: "anfaenger", stitchesPerMinute: 14 });
+  });
+  it("drops invalid parts", () => {
+    save(KEYS.pace, { pace: "turbo", stitchesPerMinute: 0 });
+    expect(loadPace()).toEqual({ pace: "geuebt", stitchesPerMinute: null });
   });
 });

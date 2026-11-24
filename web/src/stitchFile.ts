@@ -1,12 +1,15 @@
 import { defaultParams, paramsValid, type Params } from "./api";
 import { COLOR_RULE, migrateOpenPick, type ColorPicks } from "./colors";
 import { DIALECT_IDS } from "./dialects";
+import { sanitizePace, type PaceSetting } from "./time";
 
 export interface StitchFile {
   text: string;
   dialect: string;
   params: Params;
   colors: ColorPicks;
+  /** Optional: files from before the time estimate have none. */
+  pace?: PaceSetting;
 }
 
 export type StitchFileError = "badJson" | "notStitchFile" | "badVersion";
@@ -55,6 +58,7 @@ export function parseStitchFile(raw: string): ParsedStitchFile {
       dialect: typeof data.dialect === "string" && DIALECT_IDS.includes(data.dialect) ? data.dialect : "de",
       params: { ...params, color },
       colors,
+      ...(data.pace !== undefined && { pace: sanitizePace(data.pace) }),
     },
   };
 }

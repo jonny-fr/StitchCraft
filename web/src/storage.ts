@@ -2,6 +2,7 @@ import { defaultParams, paramsValid, type Params } from "./api";
 import { COLOR_RULE, migrateOpenPick, type ColorPicks } from "./colors";
 import { DIALECT_IDS } from "./dialects";
 import { THEMES, type Theme } from "./theme";
+import { sanitizePace, type PaceSetting } from "./time";
 
 export const KEYS = {
   text: "stitchcraft.text",
@@ -11,6 +12,7 @@ export const KEYS = {
   colorRule: "stitchcraft.colorRule",
   lang: "stitchcraft.lang",
   theme: "stitchcraft.theme",
+  pace: "stitchcraft.pace",
 } as const;
 
 export function load<T>(key: string, fallback: T): T {
@@ -71,4 +73,9 @@ export function loadColorSettings(): { params: Params; picks: ColorPicks } {
 export function loadTheme(): Theme {
   const v = loadString(KEYS.theme, "dark");
   return (THEMES as readonly string[]).includes(v) ? (v as Theme) : "dark";
+}
+
+/** The crochet pace for the time estimate; practised unless another one was chosen. */
+export function loadPace(): PaceSetting {
+  return sanitizePace(load<unknown>(KEYS.pace, null));
 }

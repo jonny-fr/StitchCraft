@@ -1,10 +1,18 @@
 import type { Word } from "./editor/language";
+import type { PaceSetting } from "./time";
 import { decodeYarnBin, type Yarn } from "./viewer/yarn";
 
 export interface Span { start: number; end: number; line: number; col: number }
 export interface Diagnostic { code: string; severity: "error" | "warning" | "info"; span: Span | null; params: Record<string, unknown> }
 export interface RowCount { number: number; kind: string; actual: number; expected: number | null; line?: number | null }
-export interface Validation { dialect: string; ok: boolean; total_stitches: number; diagnostics: Diagnostic[]; rows: RowCount[] }
+export interface RowTime { number: number; kind: string; seconds: number }
+/** Estimated crochet time (without stuffing, sewing together and weaving in ends); per_row holds the middle of the range. */
+export interface TimeEstimate { seconds_low: number; seconds_high: number; per_row: RowTime[] }
+export interface Validation {
+  dialect: string; ok: boolean; total_stitches: number; diagnostics: Diagnostic[]; rows: RowCount[]; time_estimate: TimeEstimate | null;
+}
+export type Pace = "anfaenger" | "geuebt" | "schnell";
+export const PACES: Pace[] = ["anfaenger", "geuebt", "schnell"];
 export interface Params {
   yarn_mm: number; hook_mm: number; gauge_stitches: number | null; gauge_rows: number | null;
   fill: number; handedness: "right" | "left"; right_side_out: boolean; material: Material; color: string;
@@ -48,9 +56,14 @@ async function json<T>(res: Response): Promise<T> {
   return (await ok(res)).json() as Promise<T>;
 }
 
-export async function validate(text: string, dialect: string, signal?: AbortSignal): Promise<Validation> {
+/** What the time estimate depends on besides the text: the yarn (thickness, material; none while invalid) and the pace. */
+export interface Timing { yarn: Pick<Params, "yarn_mm" | "material"> | null; pace: PaceSetting }
+
+export async function validate(text: string, dialect: string, timing: Timing, signal?: AbortSignal): Promise<Validation> {
+  const { yarn, pace } = timing;
+  const body = { text, dialect, ...(yarn && { params: yarn }), pace: pace.pace, stitches_per_minute: pace.stitchesPerMinute };
   const res = await fetch("/api/v1/validate", {
-    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text, dialect }), signal,
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal,
   });
   return json<Validation>(res);
 }

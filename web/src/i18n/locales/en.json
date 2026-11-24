@@ -149,5 +149,25 @@
     },
     "color": "Yarn colour",
     "more": "More"
+  },
+  "time": {
+    "label": "Crochet time",
+    "note": "Estimated crochet time, without stuffing, sewing together and weaving in ends.",
+    "min": "≈ {{value}} min",
+    "minRange": "≈ {{low}}–{{high}} min",
+    "hour": "≈ {{value}} h",
+    "hourRange": "≈ {{low}}–{{high}} h",
+    "half": "½",
+    "lessThanMinute": "< 1 min",
+    "upTo": "up to here {{time}}",
+    "pace": "Pace",
+    "paces": {
+      "anfaenger": "Beginner",
+      "geuebt": "Practised",
+      "schnell": "Fast"
+    },
+    "ownPace": "Own pace (st/min)",
+    "ownPaceHint": "Your own measured single crochet (US sc) per minute with this yarn; replaces pace and yarn factor. Other stitches take longer or shorter in the ratio of the table.",
+    "perRow": "By round/row"
   }
 }
