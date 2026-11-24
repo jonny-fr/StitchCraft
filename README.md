@@ -104,7 +104,9 @@ cd web && pnpm test && pnpm typecheck && pnpm e2e
 cd services/snapshot && npm ci && npm test    # Renderer; echter Chromium-Lauf: SNAPSHOT_REAL=1 SNAPSHOT_KEY=<id> STITCHCRAFT_WEB_URL=…
 ```
 
-`?fps` an der UI-URL blendet einen FPS-Zähler ein (A9, Viewer ≥ 30 FPS).
+`?fps` an der UI-URL blendet einen FPS-Zähler ein (A9, Viewer ≥ 30 FPS). Gemessen wird A9 in
+`web/e2e/fps.e2e.ts` (≈ 5 000 Maschen, Totale und Nahaufnahme); nur auf macOS mit Hardware-GPU (Metal),
+sonst übersprungen.
 
 ## Aufbau
 
