@@ -204,7 +204,7 @@ test.describe("U2 Erreichbarkeit", () => {
 
     test("Faserflaum", async ({ page }) => {
       const levels = () => page.evaluate(() => (window as unknown as { __stitchcraft: Hook }).__stitchcraft.levels());
-      expect((await levels()).fuzz).toBeGreaterThan(0); // cotton: a subtle fuzz shell
+      await expect.poll(async () => (await levels()).fuzz).toBeGreaterThan(0); // cotton: a subtle fuzz shell
       await click(page.getByRole("button", { name: "Werkzeuge" }));
       await click(page.getByLabel("Faserflaum"));
       await expect(page.getByLabel("Faserflaum")).not.toBeChecked();

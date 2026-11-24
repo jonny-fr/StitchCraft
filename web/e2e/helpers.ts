@@ -77,7 +77,7 @@ export interface Hook {
   hitPoint(): { x: number; y: number; stitch: number } | null;
   cameraDirection(): [number, number, number];
   closeUp(mm: number): boolean;
-  levels(): { chunks: number[]; fuzz: number };
+  levels(): { chunks: number[]; fuzz: number; bytes: number };
 }
 
 /** Computes a preview straight through the API and waits until it is cached; returns its key. */

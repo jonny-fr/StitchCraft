@@ -2,22 +2,29 @@ import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { useEffect, useMemo } from "react";
 import {
   BufferAttribute,
+  Frustum,
   Group,
+  Matrix4,
   Mesh,
   MeshBasicMaterial,
   MeshPhysicalMaterial,
   Vector2,
+  Sphere,
   Vector3,
   type BufferGeometry,
+  type DataTexture,
   type PerspectiveCamera,
 } from "three";
 import type { Material } from "../api";
-import { FUZZ, fuzzTexture, shellMaterial } from "./fuzz";
-import { chunks, FAR, LEVELS, levelShells, LOD_MIN_POINTS, nextLevel, visibleSegments, yarnPixels, type Chunk } from "./lod";
+import { FUZZ, fuzzHeights, shellCoverage, shellMaterial, shellTexture } from "./fuzz";
+import { chunks, FAR, LEVELS, levelShells, LOD_MIN_POINTS, nextLevel, retained, visibleSegments, yarnPixels, type Chunk } from "./lod";
 import { plyNormalMap } from "./ply";
 import { buildTube, pointIndices, vertexColors, yarnFrames, type Yarn } from "./yarn";
 
-/** Surface look per yarn material: shading, strength of the ply normal map; the fuzz shell is in FUZZ. */
+/**
+ * Surface look per yarn material: shading, strength of the ply normal map; the fuzz shell is in FUZZ.
+ * Any change to the look: bump data/render.json, or the MCP serves cached PNGs of the old one.
+ */
 export const MATERIAL_LOOK: Record<Material, { roughness: number; sheen: number; sheenRoughness: number; normalScale: number }> = {
   cotton: { roughness: 0.85, sheen: 0.6, sheenRoughness: 0.45, normalScale: 1 },
   acrylic: { roughness: 0.5, sheen: 0.25, sheenRoughness: 0.3, normalScale: 0.7 },
@@ -38,10 +45,12 @@ interface Tube {
 interface Built {
   tube: Tube;
   core: Mesh;
-  /** Coarser tube for the fuzz shells, built the first time they are shown. */
+  /** Coarser tube for the fuzz shells, built while they are shown. */
   shellTube?: Tube;
   shells: Mesh[];
 }
+
+const dispose = (b: Built | undefined) => (b?.tube.geometry.dispose(), b?.shellTube?.geometry.dispose());
 
 interface ChunkState extends Chunk {
   index: number;
@@ -82,15 +91,27 @@ export function YarnMesh({ yarn, material, colorOf, selected, silhouette, fuzz, 
     surface.normalScale = new Vector2(look.normalScale, look.normalScale);
   }, [surface, look]);
   const fuzzLook = FUZZ[material];
-  // shell materials per level (levels draw different numbers of shells over the same height)
-  const { shellMaterials, fuzzMap } = useMemo(() => {
-    if (!fuzzLook.shells) return { shellMaterials: LEVELS.map(() => []), fuzzMap: null };
-    const map = fuzzTexture(fuzzLook);
+  // shell materials per level (levels draw different numbers of shells over the same height), one coverage texture each
+  const { shellMaterials, textures } = useMemo(() => {
+    if (!fuzzLook.shells) return { shellMaterials: LEVELS.map(() => []), textures: [] };
+    const heights = fuzzHeights(fuzzLook);
+    const textures: DataTexture[] = [];
     const sets = new Map<number, MeshPhysicalMaterial[]>();
-    const set = (n: number) => sets.get(n) ?? sets.set(n, Array.from({ length: n }, (_, i) => shellMaterial({ ...fuzzLook, shells: n }, i + 1, radius, map))).get(n)!;
-    return { shellMaterials: LEVELS.map((_, level) => set(levelShells(level, fuzzLook.shells))), fuzzMap: map };
+    const set = (n: number) => {
+      if (!sets.has(n))
+        sets.set(n, Array.from({ length: n }, (_, i) => {
+          const tex = shellTexture(shellCoverage(heights, i + 1, n));
+          textures.push(tex);
+          return shellMaterial({ ...fuzzLook, shells: n }, i + 1, radius, tex);
+        }));
+      return sets.get(n)!;
+    };
+    return { shellMaterials: LEVELS.map((_, level) => set(levelShells(level, fuzzLook.shells))), textures };
   }, [fuzzLook, radius]);
-  useEffect(() => () => (fuzzMap?.dispose(), shellMaterials.flat().forEach((m) => m.dispose())), [fuzzMap, shellMaterials]);
+  useEffect(
+    () => () => (textures.forEach((t) => t.dispose()), new Set(shellMaterials.flat()).forEach((m) => m.dispose())),
+    [textures, shellMaterials],
+  );
   useEffect(() => () => (ply.dispose(), surface.dispose(), black.dispose()), [ply, surface, black]);
 
   const state = useMemo(() => {
@@ -102,15 +123,24 @@ export function YarnMesh({ yarn, material, colorOf, selected, silhouette, fuzz, 
       root.add(group);
       return { ...c, index, group, level: -1, built: [] };
     });
+    // e2e hook: bytes held by all built tubes (CPU side; the GPU holds a copy of the same buffers)
+    root.userData.tubeBytes = () => {
+      let bytes = 0;
+      for (const c of list)
+        for (const b of c.built)
+          for (const g of b ? [b.tube.geometry, b.shellTube?.geometry] : [])
+            if (g) for (const a of [...Object.values(g.attributes), g.index!]) bytes += a.array.byteLength;
+      return bytes;
+    };
     return { root, list, frames };
   }, [yarn, centre]);
   useEffect(
-    () => () => state.list.forEach((c) => c.built.forEach((b) => (b?.tube.geometry.dispose(), b?.shellTube?.geometry.dispose()))),
+    () => () => state.list.forEach((c) => c.built.forEach(dispose)),
     [state],
   );
 
   // everything a level's meshes depend on besides the camera; read by build() and the effects below
-  const shown = { colorOf, selected, visiblePoints, silhouette, fuzz, shellMaterials, surface, black };
+  const shown = { colorOf, selected, visiblePoints, silhouette, fuzz, shellMaterials, surface, black, fuzzReach: fuzzLook.height * radius };
 
   const paint = (t: Tube) => {
     const rgb = vertexColors(yarn, t.sides, shown.colorOf, shown.selected, HIGHLIGHT, t.points);
@@ -131,8 +161,18 @@ export function YarnMesh({ yarn, material, colorOf, selected, silhouette, fuzz, 
   const dress = (c: ChunkState, b: Built, level: number) => {
     b.core.material = shown.silhouette ? shown.black : shown.surface;
     const materials = shown.fuzz && !shown.silhouette ? shown.shellMaterials[level] : [];
-    if (materials.length) b.shellTube ??= tube(c, LEVELS[level].shellSides, LEVELS[level].shellStep);
     b.shells.forEach((s) => s.removeFromParent());
+    if (!materials.length) {
+      b.shellTube?.geometry.dispose();
+      b.shellTube = undefined;
+      b.shells = [];
+      return;
+    }
+    if (!b.shellTube) {
+      b.shellTube = tube(c, LEVELS[level].shellSides, LEVELS[level].shellStep);
+      // the shells reach further out than the tube: keep them from being culled at the edge of the view
+      b.shellTube.geometry.boundingSphere!.radius += shown.fuzzReach;
+    }
     // blending order inner to outer shell, then by chunk: fixed, whatever order the meshes were created in
     const order = (shell: number) => shell * state.list.length + c.index;
     b.shells = materials.map((m, i) => Object.assign(new Mesh(b.shellTube!.geometry, m), { raycast: noRaycast, renderOrder: order(i + 1) }));
@@ -156,14 +196,21 @@ export function YarnMesh({ yarn, material, colorOf, selected, silhouette, fuzz, 
 
   const eye = useMemo(() => new Vector3(), []);
   const size = useMemo(() => new Vector2(), []);
+  const view = useMemo(() => ({ frustum: new Frustum(), matrix: new Matrix4(), sphere: new Sphere() }), []);
   useFrame(() => {
     gl.getDrawingBufferSize(size);
+    camera.updateMatrixWorld();
+    view.frustum.setFromProjectionMatrix(view.matrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
     eye.copy(camera.position).add(centre); // camera in yarn coordinates
     const coarsest = yarn.count > LOD_MIN_POINTS ? FAR : FAR - 1;
     let builds = 0;
     for (const c of state.list) {
+      // chunks out of view keep only the coarsest level, so their detail does not pile up in memory
+      view.sphere.center.set(c.centre[0], c.centre[1], c.centre[2]).sub(centre);
+      view.sphere.radius = c.radius + shown.fuzzReach;
       const d = Math.hypot(eye.x - c.centre[0], eye.y - c.centre[1], eye.z - c.centre[2]) - c.radius;
-      const level = nextLevel(c.level, yarnPixels(radius, d, camera.fov, size.y), coarsest);
+      const px = view.frustum.intersectsSphere(view.sphere) ? yarnPixels(radius, d, camera.fov, size.y) : 0;
+      const level = nextLevel(c.level, px, coarsest);
       if (level === c.level) continue;
       // the first level of every chunk is built at once, later switches are spread over frames
       if (!c.built[level]) {
@@ -174,6 +221,10 @@ export function YarnMesh({ yarn, material, colorOf, selected, silhouette, fuzz, 
       c.group.clear();
       c.group.add(c.built[level]!.core);
       c.level = level;
+      // keep the level shown and its neighbours (cheap to switch back), free the rest
+      c.built.forEach((b, l) => {
+        if (b && !retained(level, l)) (dispose(b), (c.built[l] = undefined));
+      });
     }
   });
 

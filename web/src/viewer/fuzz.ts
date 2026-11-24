@@ -1,10 +1,11 @@
-import { DataTexture, MeshPhysicalMaterial, NearestFilter, RepeatWrapping } from "three";
+import { DataTexture, LinearMipmapLinearFilter, MeshPhysicalMaterial, RedFormat, RepeatWrapping } from "three";
 import type { Material } from "../api";
 
 /**
  * Fuzz shell: loose fibres around the yarn as stacked, slightly larger copies of the tube (shell texturing).
- * Each shell keeps only the fibre texels whose height lies near its own, so a fibre that lifts off the yarn climbs
- * from shell to shell.
+ * Each shell shows the fibre texels whose height lies near its own, so a fibre that lifts off the yarn climbs
+ * from shell to shell. The shells carry fibre coverage, not heights, so mipmaps can average it: from afar the
+ * fibres blend into a translucent haze instead of aliasing into speckle.
  */
 export interface FuzzLook {
   /** Number of shells; 0 turns the fuzz off. */
@@ -63,38 +64,44 @@ export function fuzzHeights(look: FuzzLook, size = FUZZ_TEXTURE_SIZE, seed = 1):
   return out;
 }
 
-export function fuzzTexture(look: FuzzLook): DataTexture {
-  const h = fuzzHeights(look);
-  const rgba = new Uint8Array(h.length * 4);
-  for (let i = 0; i < h.length; i++) rgba[i * 4] = rgba[i * 4 + 1] = rgba[i * 4 + 2] = rgba[i * 4 + 3] = h[i];
-  const tex = new DataTexture(rgba, FUZZ_TEXTURE_SIZE, FUZZ_TEXTURE_SIZE);
+/** Height of shell `i` of `n` (1-based) as a fraction of the fuzz height. */
+export const shellLevel = (i: number, n: number) => i / n;
+
+/**
+ * Fibre coverage (0–255) of shell `i` of `n`: a fibre texel shows on the two shells around its height, fading
+ * with the distance, so a rising fibre climbs smoothly from shell to shell.
+ */
+export function shellCoverage(heights: Uint8Array, i: number, n: number): Uint8Array {
+  const level = shellLevel(i, n);
+  return heights.map((h) => (h ? Math.round(255 * Math.max(0, 1 - Math.abs(h / 255 - level) * n)) : 0));
+}
+
+export function shellTexture(coverage: Uint8Array): DataTexture {
+  const tex = new DataTexture(coverage, FUZZ_TEXTURE_SIZE, FUZZ_TEXTURE_SIZE, RedFormat);
   tex.wrapS = tex.wrapT = RepeatWrapping;
-  // heights must not be blended: an averaged texel would land on a wrong shell
-  tex.magFilter = tex.minFilter = NearestFilter;
+  tex.minFilter = LinearMipmapLinearFilter;
+  tex.generateMipmaps = true;
+  tex.anisotropy = 4;
+  tex.unpackAlignment = 1;
   tex.needsUpdate = true;
   return tex;
 }
 
-/** Height of shell `i` of `n` (1-based) as a fraction of the fuzz height; each shell owns one band. */
-export const shellLevel = (i: number, n: number) => i / n;
-
 /**
- * Material of one shell: pushed out along the normal on the GPU; a fibre texel shows on the two shells around its
- * height, fading with the distance, so a rising fibre climbs smoothly from shell to shell.
+ * Material of one shell, `coverage` its texture (see shellCoverage): pushed out along the normal on the GPU,
+ * translucent by the fibre coverage.
  */
-export function shellMaterial(look: FuzzLook, i: number, radius: number, map: DataTexture): MeshPhysicalMaterial {
+export function shellMaterial(look: FuzzLook, i: number, radius: number, coverage: DataTexture): MeshPhysicalMaterial {
   // translucent and without depth: thin fibres let light through, and the AO pass must not darken them like solid yarn;
-  // sheen as on the yarn, fibres catch the light at grazing angles
+  // sheen in the fibres' own colour (a white sheen turns red mohair into white speckle)
   const m = new MeshPhysicalMaterial({
     vertexColors: true, roughness: 1, sheen: 1, sheenRoughness: 0.6, sheenColor: "#ffffff",
     transparent: true, opacity: look.opacity, depthWrite: false,
   });
   m.defines = { USE_UV: "" };
   const uniforms = {
-    fuzzMap: { value: map },
+    fuzzMap: { value: coverage },
     fuzzOffset: { value: shellLevel(i, look.shells) * look.height * radius },
-    fuzzLevel: { value: shellLevel(i, look.shells) },
-    fuzzBand: { value: 1 / look.shells },
   };
   m.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
@@ -102,16 +109,18 @@ export function shellMaterial(look: FuzzLook, i: number, radius: number, map: Da
       .replace("#include <common>", "#include <common>\nuniform float fuzzOffset;")
       .replace("#include <begin_vertex>", "#include <begin_vertex>\ntransformed += normal * fuzzOffset;");
     shader.fragmentShader = shader.fragmentShader
-      .replace("#include <common>", "#include <common>\nuniform sampler2D fuzzMap;\nuniform float fuzzLevel;\nuniform float fuzzBand;")
+      .replace("#include <common>", "#include <common>\nuniform sampler2D fuzzMap;")
       .replace(
         "#include <alphatest_fragment>",
         [
-          "float fuzzH = texture2D(fuzzMap, vUv).g;",
-          "float fuzzA = fuzzH == 0.0 ? 0.0 : 1.0 - abs(fuzzH - fuzzLevel) / fuzzBand;",
-          "if (fuzzA <= 0.0) discard;",
+          "float fuzzA = texture2D(fuzzMap, vUv).r;",
+          // seen edge-on, a shell stacks its whole haze into one bright line: fade it there
+          "fuzzA *= mix(0.3, 1.0, smoothstep(0.0, 0.5, abs(dot(normalize(vNormal), normalize(vViewPosition)))));",
+          "if (fuzzA < 0.004) discard;",
           "diffuseColor.a *= fuzzA;",
         ].join("\n"),
-      );
+      )
+      .replace("#include <lights_physical_fragment>", "#include <lights_physical_fragment>\nmaterial.sheenColor *= vColor.rgb;");
   };
   return m;
 }

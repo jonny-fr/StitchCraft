@@ -101,16 +101,18 @@ function E2eHook() {
       cameraDirection() {
         return camera.position.clone().normalize().toArray();
       },
-      /** Shown yarn chunks per level of detail (lod.ts), and how many of them draw fuzz shells. */
+      /** Shown yarn chunks per level of detail (lod.ts), how many of them draw fuzz shells, bytes of all built tubes. */
       levels() {
         const chunks = LEVELS.map(() => 0);
         let fuzz = 0;
+        let bytes = 0;
         scene.traverseVisible((o) => {
+          if (o.userData.tubeBytes) bytes = (o.userData.tubeBytes as () => number)();
           if (!o.userData.yarn) return;
           chunks[o.userData.level as number]++;
           if (o.children.length) fuzz++;
         });
-        return { chunks, fuzz };
+        return { chunks, fuzz, bytes };
       },
       /** Close-up: orbits around the yarn under the canvas centre, `mm` away from it; false when the centre shows no yarn. */
       closeUp(mm: number) {

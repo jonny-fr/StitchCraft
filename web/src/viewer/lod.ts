@@ -83,6 +83,9 @@ export function nextLevel(current: number, px: number, coarsest = FAR): number {
   return target;
 }
 
+/** Whether a chunk showing level `shown` keeps its built `level`: only neighbours stay, to switch back cheaply. */
+export const retained = (shown: number, level: number) => Math.abs(level - shown) <= 1;
+
 /** Number of segments to draw of a chunk built from `points` when the yarn is shown up to point `visible` (exclusive). */
 export function visibleSegments(points: ArrayLike<number>, visible: number): number {
   let lo = 0, hi = points.length; // first index with points[i] >= visible

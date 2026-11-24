@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chunks, FAR, LEVELS, levelShells, nextLevel, visibleSegments, yarnPixels } from "./lod";
+import { chunks, FAR, LEVELS, levelShells, nextLevel, retained, visibleSegments, yarnPixels } from "./lod";
 import type { Yarn } from "./yarn";
 
 function line(n: number): Yarn {
@@ -63,6 +63,16 @@ describe("level of detail", () => {
     const px = [3, 8, 12, 9, 40, 60, 30, 6];
     const run = () => px.reduce<number[]>((acc, p) => [...acc, nextLevel(acc.at(-1) ?? -1, p)], []);
     expect(run()).toEqual(run());
+  });
+});
+
+describe("retained", () => {
+  it("keeps the shown level and its neighbours, frees the rest", () => {
+    expect(retained(0, 0)).toBe(true);
+    expect(retained(0, 1)).toBe(true);
+    expect(retained(0, FAR)).toBe(FAR <= 1);
+    expect(retained(FAR, 0)).toBe(FAR <= 1);
+    expect(retained(1, 0) && retained(1, FAR)).toBe(true);
   });
 });
 
