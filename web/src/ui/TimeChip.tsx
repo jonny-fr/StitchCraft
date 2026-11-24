@@ -72,8 +72,8 @@ function TimePanel({ estimate, range, pace, onPace }: { estimate: TimeEstimate; 
       <div className="time-rows" role="region" aria-label={t("time.perRow")} tabIndex={0}>
         <table className="counts">
           <tbody>
-            {estimate.per_row.map((r) => (
-              <tr key={r.number}>
+            {estimate.per_row.map((r, i) => (
+              <tr key={`${r.number}-${i}`}>
                 <td>{t("app.row", { number: r.number })}</td>
                 <td>{formatDuration(t, r.seconds)}</td>
               </tr>

@@ -115,9 +115,10 @@ export default function App() {
       setProgress(null);
     }
   }, [text, dialect, params, previewInput, t]);
-  // small screens have no preview button: the 3D tab computes the preview when it is missing or stale
+  // small screens have no preview button: the 3D tab computes the preview when it is missing or stale;
+  // while the pattern has errors it only switches, so the last preview stays reachable
   const openViewer = () => {
-    if (!busy && paramsOk && previewed !== previewInput) void runPreview();
+    if (!busy && paramsOk && validation?.ok !== false && previewed !== previewInput) void runPreview();
     else setTab("viewer");
   };
 

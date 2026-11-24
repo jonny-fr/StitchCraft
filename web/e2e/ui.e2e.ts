@@ -399,6 +399,23 @@ test.describe("U7 Mobil", () => {
     await expect(editor(page)).toBeVisible();
     await expect(page.locator("canvas")).toBeHidden();
   });
+
+  test("mit Fehlern in der Anleitung zeigt der 3D-Tab die letzte Vorschau", async ({ page }) => {
+    await startApp(page);
+    await page.getByRole("button", { name: "3D", exact: true }).click();
+    await expect(page.locator("canvas")).toBeVisible({ timeout: 60_000 });
+    await page.getByRole("button", { name: "Anleitung", exact: true }).click();
+    const wrong = [...SPHERE];
+    wrong[1] = "Rd. 2: 6x zun (13)";
+    await typePattern(page, wrong);
+    await expect(page.locator(".status-bar")).toHaveText(/^1 Fehler/);
+    const previews: string[] = [];
+    page.on("request", (r) => void (r.url().includes("/previews") && r.method() === "POST" && previews.push(r.url())));
+    await page.getByRole("button", { name: "3D", exact: true }).click();
+    await expect(page.locator("canvas")).toBeVisible();
+    await expect(page.getByRole("button", { name: "3D", exact: true })).toHaveAttribute("aria-pressed", "true");
+    expect(previews).toEqual([]);
+  });
 });
 
 test("Snapshot-Modus behält seinen festen Hintergrund, unabhängig vom Theme", async ({ page }) => {
