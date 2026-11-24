@@ -6,6 +6,7 @@ import {
   createPreview,
   editor,
   editorText,
+  type Hook,
   importStitchFile,
   menuButton,
   openPopover,
@@ -199,6 +200,15 @@ test.describe("U2 Erreichbarkeit", () => {
       await click(page.getByRole("button", { name: "Werkzeuge" }));
       await click(page.getByLabel("Silhouette"));
       await expect(canvasBackground(page)).toHaveCSS("background-color", "rgb(255, 255, 255)");
+    });
+
+    test("Faserflaum", async ({ page }) => {
+      const levels = () => page.evaluate(() => (window as unknown as { __stitchcraft: Hook }).__stitchcraft.levels());
+      expect((await levels()).fuzz).toBeGreaterThan(0); // cotton: a subtle fuzz shell
+      await click(page.getByRole("button", { name: "Werkzeuge" }));
+      await click(page.getByLabel("Faserflaum"));
+      await expect(page.getByLabel("Faserflaum")).not.toBeChecked();
+      await expect.poll(async () => (await levels()).fuzz).toBe(0);
     });
 
     test("PNG", async ({ page }) => {

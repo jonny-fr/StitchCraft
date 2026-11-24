@@ -52,6 +52,16 @@ export async function runPreview(page: Page) {
   await page.waitForFunction(() => Boolean((window as unknown as { __stitchcraft?: unknown }).__stitchcraft));
 }
 
+/** Closed tube of 4 896 stitches, close to the 5 000 limit (A9 viewer FPS); its preview takes about 40 s. */
+export const BIG = [
+  "Rd. 1: 6 fM in MR (6)",
+  "Rd. 2: 6x zun (12)",
+  ...Array.from({ length: 10 }, (_, i) => `Rd. ${i + 3}: (${i + 1} fM, zun) x6 (${6 * (i + 3)})`),
+  "Rd. 13-68: 72 fM (72)",
+  ...Array.from({ length: 10 }, (_, i) => `Rd. ${69 + i}: (${10 - i} fM, abn) x6 (${6 * (11 - i)})`),
+  "Rd. 79: 6x abn (6)",
+];
+
 /** Flat piece that widens on one side only: front, side, top and iso all look clearly different. */
 export const ASYMMETRIC = [
   "R 1: 11 Lm, wenden",
@@ -66,6 +76,8 @@ export const ASYMMETRIC = [
 export interface Hook {
   hitPoint(): { x: number; y: number; stitch: number } | null;
   cameraDirection(): [number, number, number];
+  closeUp(mm: number): boolean;
+  levels(): { chunks: number[]; fuzz: number };
 }
 
 /** Computes a preview straight through the API and waits until it is cached; returns its key. */

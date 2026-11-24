@@ -17,7 +17,7 @@ const SHOT = { animations: "disabled", maxDiffPixelRatio: 0.005, threshold: 0.2 
 
 /** Runs `shoot` with the controls that float over the canvas hidden (the stats chip shows timings): the render only. */
 async function renderOnly<T>(page: Page, shoot: () => Promise<T>): Promise<T> {
-  const style = await page.addStyleTag({ content: ".info-chip, .viewer-actions, .dock { visibility: hidden !important; }" });
+  const style = await page.addStyleTag({ content: ".info-chip, .viewer-actions, .dock, .time-chip { visibility: hidden !important; }" });
   try {
     return await shoot();
   } finally {

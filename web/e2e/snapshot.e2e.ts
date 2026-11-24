@@ -65,3 +65,14 @@ test("Unbekannter Schlüssel und ungültige Parameter melden error", async ({ pa
     await expect(page.locator("canvas")).toHaveCount(0);
   }
 });
+
+test("Zwei Snapshots derselben Eingabe sind pixelgleich, mit Ply-Normal-Map und Faserflaum", async ({ page }) => {
+  const id = await createPreview(page, SPHERE);
+  const query = `snapshot=${id}&view=iso&color=c0392b&material=mohair`;
+  const first = await snapshot(page, query);
+  const second = await snapshot(page, query);
+  expect(second.equals(first)).toBe(true);
+  // and the fuzz is really drawn: mohair differs from acrylic (no fuzz)
+  const acrylic = await snapshot(page, `snapshot=${id}&view=iso&color=c0392b&material=acrylic`);
+  expect(await diffRatio(page, first, acrylic)).toBeGreaterThan(0.01);
+});

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { closePopover, openPopover, SPHERE, type Hook, startApp, typePattern } from "./helpers";
+import { closePopover, openPopover, openYarn, runPreview, SPHERE, type Hook, startApp, typePattern } from "./helpers";
 
 test("Beispiel tippen, Lint, Vorschau, Klick auf Masche markiert Token", async ({ page }) => {
   await startApp(page);
@@ -48,4 +48,29 @@ test("Beispiel tippen, Lint, Vorschau, Klick auf Masche markiert Token", async (
 
   await expect(page.getByText(`Masche ${hit!.stitch} (`)).toBeVisible();
   expect(await page.evaluate(() => getSelection()?.toString() ?? "")).toBe(expected);
+});
+
+test("Faserflaum bei Mohair: Schalter blendet die Fasern aus und wieder ein, das Bild ist danach pixelgleich", async ({ page }) => {
+  await startApp(page);
+  const yarn = await openYarn(page);
+  await yarn.getByLabel("Material").selectOption("mohair");
+  await closePopover(page);
+  await runPreview(page);
+  // the canvas pixels alone (the controls floating over it keep a focus ring after the popover closed)
+  const pixels = () => page.evaluate(() => document.querySelector("canvas")!.toDataURL("image/png"));
+  const hook = () => page.evaluate(() => (window as unknown as { __stitchcraft: Hook }).__stitchcraft.levels());
+  await expect.poll(async () => (await hook()).fuzz).toBeGreaterThan(0);
+  await page.waitForTimeout(2000); // SwiftShader takes a while per frame
+  const withFuzz = await pixels();
+
+  const toggle = async () => {
+    await openPopover(page, page.getByRole("button", { name: "Werkzeuge" }));
+    await page.getByLabel("Faserflaum").click();
+    await closePopover(page);
+  };
+  await toggle();
+  expect((await hook()).fuzz).toBe(0);
+  await expect.poll(pixels).not.toBe(withFuzz);
+  await toggle();
+  await expect.poll(pixels).toBe(withFuzz);
 });
