@@ -38,6 +38,7 @@ Bildmitte gesetzt (vorher und nachher dieselbe Kamera), Garn 2 mm, Nadel 3,5 mm.
 ![Becher: vorher und nachher](m5-render-becher.png)
 ![Stb-Quadrat: vorher und nachher](m5-render-stb.png)
 ![Baumwolle und Mohair nachher, Mohair vorher](m5-render-mohair.png)
+![Ganze Kugel: Baumwolle und Mohair](m5-render-ganz.png)
 
 - **Ply:** prozedurale Normal-Map im Tangentialraum (`web/src/viewer/ply.ts`): vier runde Plies, Helixwinkel
   ≈ 37°, darauf feine Fasern längs des Garns; Stärke je Material (`MATERIAL_LOOK.normalScale`). Vorher lag die
@@ -46,14 +47,23 @@ Bildmitte gesetzt (vorher und nachher dieselbe Kamera), Garn 2 mm, Nadel 3,5 mm.
   kräftig (Kordel-Anmutung) – Kalibrierung gegen Fotos steht noch aus.
 - **Faserflaum** (`fuzz.ts`): bis zu sechs transluzente Schalen über der Tube, Fasern steigen von Schale zu Schale
   auf; Mohair deutlich (Halo, füllt die Lücken weich), Baumwolle dezent, Acryl aus. Schalter „Faserflaum“ im
-  Popover „Werkzeuge“. Mohair wirkt damit flauschig; der Kern zeigt die Plies noch, echtes Mohair verdeckt sie
-  stärker.
+  Popover „Werkzeuge“. Jede Schale trägt die Faserdeckung als Textur mit Mipmaps: aus der Nähe einzelne feine
+  Fasern, aus der Ferne ein durchscheinender Schleier statt Pixelrauschen; streifend gesehene Schalen werden
+  abgeschwächt, der Glanz der Fasern hat die Garnfarbe (vorher weiße Sprenkel auf rotem Mohair). In der Totale
+  bleibt ein heller, weicher Saum an der Silhouette (Schalen plus Sheen des Mohair-Kerns). Der Kern zeigt die
+  Plies noch, echtes Mohair verdeckt sie stärker.
 - **LOD** (`lod.ts`): Garn in Abschnitte zu 2 048 Punkten geteilt, je Abschnitt nach Garndicke in Gerätepixeln:
   ab 48 px 12 Seiten + volle Schalen, ab 10 px 8 Seiten + halbe Schalen auf gröberer Tube, darunter 4 Seiten,
   jeder zweite Punkt, ohne Flaum (Hysterese gegen Flackern). Stücke bis 100 000 Garnpunkte (≈ 800 Maschen)
-  bleiben immer mindestens „nah“. Abschnitte außerhalb des Bildes werden nicht gezeichnet.
+  bleiben immer mindestens „nah“. Abschnitte außerhalb des Bildes werden nicht gezeichnet und gehen auf die
+  gröbste Stufe; je Abschnitt bleiben nur die gezeigte Stufe und ihre Nachbarn gebaut, Schalentuben nur solange
+  Flaum gezeigt wird. Speicher der Tuben (CPU, die GPU hält dieselbe Menge) beim 4 896-Maschen-Stück entlang
+  Totale → Nahaufnahme iso/vorne/seitlich/oben → Totale: höchstens 446 MB (vorher bis 1 399 MB und nie
+  freigegeben; der Viewer vor Task 14 hielt konstant ≈ 378 MB).
 - **Determinismus:** keine Zufallszahlen ohne festen Seed; zwei Snapshots derselben Eingabe sind pixelgleich
   (`snapshot.e2e.ts`), das MCP-PNG (`session.py --require-png`, SwiftShader) ebenfalls byte-gleich.
+- **Version des Aussehens:** `data/render.json` (jetzt 2) steckt im Pfad der vom MCP gecachten PNGs
+  (`snapshots/r2/…`); nach einer Änderung am Look wird sie erhöht, sonst liefert der Cache alte Bilder.
 
 ### A9 Viewer-FPS
 
@@ -63,15 +73,15 @@ Chromium headless mit `--use-angle=metal`, ohne Bildratenbegrenzung (`--disable-
 
 | Material | Totale | Nahaufnahme (30 mm) |
 |---|---|---|
-| Baumwolle | 89,9 FPS | 64,5 FPS |
-| Mohair | 90,5 FPS | 43,5 FPS |
+| Baumwolle | 92,0 FPS | 63,8 FPS |
+| Mohair | 92,0 FPS | 42,4 FPS |
 
 Gegenprobe mit dem Produktions-Build (Docker, nginx auf :8080), gleiche Flags, Abstand zur Masche in Bildmitte:
 
 | Material | Totale | 30 mm | 90 mm | 180 mm |
 |---|---|---|---|---|
-| Baumwolle | 91,6 | 61,4 | 57,9 | 54,6 |
-| Mohair | 91,8 | 44,1 | 39,8 | 39,5 |
+| Baumwolle | 92,0 | 64,7 | 59,2 | 54,5 |
+| Mohair | 90,4 | 43,5 | 38,0 | 39,9 |
 
 Alle Werte ≥ 30 FPS: A9 Viewer erfüllt (auf M4; ältere M-Chips haben weniger Reserve, am knappsten Mohair
 bei mittlerem Abstand).
