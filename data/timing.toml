@@ -1,0 +1,51 @@
+# Crochet time estimate (validate → time_estimate). Versioned like the other data files: raise the
+# version whenever a value changes.
+#
+# PLAUSIBILITY VALUES: our own rough estimates for a practised crocheter with ~2 mm cotton, not
+# measured. Replace them once timed samples exist. Not included: stuffing, sewing parts together and
+# weaving in ends.
+version = 1
+
+# the estimate is shown as total × (1 ± spread): it is honestly that uncertain
+spread = 0.25
+
+# seconds per stitch, per canonical stitch type (data/stitches/library.toml); a stitch type missing
+# here (special stitches to come) counts as sc
+[stitch]
+ch = 1.25
+slst = 1.5
+sc = 2.5
+hdc = 3.25
+dc = 4.0
+tr = 5.5
+
+# extra seconds on top of the stitch itself
+[macro]
+inc = 0.25    # each stitch of an increase: finding the same stitch again
+dec = 1.5     # each further stitch worked together (sc2tog: once, dc3tog: twice)
+invdec = 1.5  # the same through the front loops only
+
+[extra]
+ring = 30.0          # making the magic ring, once
+row = 8.0            # each round/row: counting, turning, moving the marker
+color_change = 30.0  # each change of yarn colour (joining, carrying or cutting)
+
+# multiplies everything; geuebt is the table itself
+[pace]
+anfaenger = 1.75
+geuebt = 1.0
+schnell = 0.7
+
+# thick yarn is a little quicker per stitch, thin yarn a little slower:
+# factor = clamp(1 + per_mm × (yarn_mm − reference_mm), min, max)
+[yarn]
+reference_mm = 2.0
+per_mm = -0.05
+min = 0.85
+max = 1.15
+
+# mohair hides the stitches and catches the hook
+[material]
+cotton = 1.0
+acrylic = 0.95
+mohair = 1.3

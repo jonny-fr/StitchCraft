@@ -24,6 +24,7 @@ def validation_dict(v: ValidationResult) -> dict:
         "total_stitches": v.total_stitches,
         "diagnostics": [diagnostic_dict(d) for d in v.diagnostics],
         "rows": v.rows,
+        "time_estimate": asdict(v.time_estimate) if v.time_estimate else None,
     }
 
 
