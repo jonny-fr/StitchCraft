@@ -28,6 +28,7 @@
     "overlay": "Photo overlay",
     "overlayOpacity": "Opacity",
     "silhouette": "Silhouette",
+    "fuzz": "Fuzz",
     "snapshot": "Save PNG",
     "exportGlb": "Export GLB",
     "stats": "{{stitches}} stitches · {{size}} cm · {{yarn}} m yarn · {{ms}} ms",

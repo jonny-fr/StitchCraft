@@ -61,6 +61,7 @@ export default function SnapshotPage({ query }: { query: SnapshotQuery }) {
           selected={null}
           onSelect={() => undefined}
           silhouette={false}
+          fuzz
           view={query.view}
           rounds={rounds}
           material={query.material}

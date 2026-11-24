@@ -24,6 +24,8 @@ interface Props {
   onOverlayOpacity(opacity: number): void;
   silhouette: boolean;
   onSilhouette(on: boolean): void;
+  fuzz: boolean;
+  onFuzz(on: boolean): void;
   onPng(): void;
   glbHref: string;
 }
@@ -76,6 +78,10 @@ export function ViewerOverlay(props: Props) {
               <label className="field check">
                 {t("app.silhouette")}
                 <input type="checkbox" checked={props.silhouette} onChange={(e) => props.onSilhouette(e.target.checked)} />
+              </label>
+              <label className="field check">
+                {t("app.fuzz")}
+                <input type="checkbox" checked={props.fuzz} onChange={(e) => props.onFuzz(e.target.checked)} />
               </label>
             </>
           )}

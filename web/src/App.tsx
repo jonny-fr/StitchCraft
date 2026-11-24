@@ -51,6 +51,7 @@ export default function App() {
   const [overlay, setOverlay] = useState<string | null>(null);
   const [overlayOpacity, setOverlayOpacity] = useState(0.5);
   const [silhouette, setSilhouette] = useState(false);
+  const [fuzz, setFuzz] = useState(true);
   const [tab, setTab] = useState<"editor" | "viewer">("editor");
   const editor = useRef<EditorHandle>(null);
   const [vocab, setVocab] = useState<Record<string, Word[]>>({});
@@ -220,6 +221,7 @@ export default function App() {
               selected={selected}
               onSelect={selectStitch}
               silhouette={silhouette}
+              fuzz={fuzz}
               view={view}
               rounds={rounds}
               material={params.material}
@@ -248,6 +250,8 @@ export default function App() {
             onOverlayOpacity={setOverlayOpacity}
             silhouette={silhouette}
             onSilhouette={setSilhouette}
+            fuzz={fuzz}
+            onFuzz={setFuzz}
             onPng={() => download(viewer.current?.snapshot() ?? "", `stitchcraft-${view}.png`)}
             glbHref={`/api/v1/previews/${result.id}/model.glb`}
           />

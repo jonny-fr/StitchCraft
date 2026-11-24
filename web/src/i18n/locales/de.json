@@ -28,6 +28,7 @@
     "overlay": "Foto-Overlay",
     "overlayOpacity": "Deckkraft",
     "silhouette": "Silhouette",
+    "fuzz": "Faserflaum",
     "snapshot": "PNG speichern",
     "exportGlb": "GLB exportieren",
     "stats": "{{stitches}} Maschen · {{size}} cm · {{yarn}} m Garn · {{ms}} ms",

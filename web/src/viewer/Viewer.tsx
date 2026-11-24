@@ -1,32 +1,15 @@
 import { Environment, Lightformer, OrbitControls, Stats } from "@react-three/drei";
-import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 import { EffectComposer, N8AO } from "@react-three/postprocessing";
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from "react";
-import {
-  BufferAttribute,
-  CanvasTexture,
-  RepeatWrapping,
-  Raycaster,
-  Vector2,
-  Vector3,
-  type BufferGeometry,
-  type Mesh,
-  type PerspectiveCamera,
-} from "three";
+import { Box3, Raycaster, Vector2, Vector3, type Intersection, type Mesh, type PerspectiveCamera } from "three";
 import type { Material } from "../api";
-import { buildTube, pointRangeForRows, vertexColors, type Yarn } from "./yarn";
-
-/** Surface look per yarn material; fuzz geometry is a later milestone. */
-export const MATERIAL_LOOK: Record<Material, { roughness: number; sheen: number; sheenRoughness: number; bumpScale: number }> = {
-  cotton: { roughness: 0.85, sheen: 0.6, sheenRoughness: 0.45, bumpScale: 0.6 },
-  acrylic: { roughness: 0.5, sheen: 0.25, sheenRoughness: 0.3, bumpScale: 0.4 },
-  mohair: { roughness: 1, sheen: 1, sheenRoughness: 0.9, bumpScale: 0.9 },
-};
+import { LEVELS } from "./lod";
+import { pointRangeForRows, type Yarn } from "./yarn";
+import { YarnMesh } from "./YarnMesh";
 
 export type View = "front" | "side" | "top" | "iso";
 type Controls = { target: Vector3; update(): void };
-const SIDES = 8;
-const HIGHLIGHT = "#e0533d";
 
 export interface ViewerHandle {
   snapshot(): string;
@@ -43,27 +26,9 @@ interface Props {
   view: View;
   rounds: boolean;
   material: Material;
+  /** Fuzz shell around the yarn (strength per material, see fuzz.ts). */
+  fuzz: boolean;
   showFps: boolean;
-}
-
-/** Ply twist as a bump map: diagonal stripes along the tube's (around, along) uv. */
-function plyTexture(): CanvasTexture {
-  const size = 64;
-  const c = document.createElement("canvas");
-  c.width = c.height = size;
-  const ctx = c.getContext("2d")!;
-  const img = ctx.createImageData(size, size);
-  for (let y = 0; y < size; y++)
-    for (let x = 0; x < size; x++) {
-      const v = 0.5 + 0.5 * Math.sin(((x + y) / size) * 2 * Math.PI * 3);
-      const i = (y * size + x) * 4;
-      img.data[i] = img.data[i + 1] = img.data[i + 2] = Math.round(255 * v ** 0.6);
-      img.data[i + 3] = 255;
-    }
-  ctx.putImageData(img, 0, 0);
-  const tex = new CanvasTexture(c);
-  tex.wrapS = tex.wrapT = RepeatWrapping;
-  return tex;
 }
 
 function viewDirection(view: View, rounds: boolean): [Vector3, Vector3] {
@@ -106,21 +71,24 @@ function CameraRig({ radius, view, rounds }: { radius: number; view: View; round
 /** Test hook (`?e2e`): client coordinates and stitch id of a visible yarn pixel, found by raycasting a grid from the centre outwards. */
 function E2eHook() {
   const { scene, camera, gl } = useThree();
+  const controls = useThree((s) => s.controls) as unknown as Controls | null;
   useEffect(() => {
+    // nearest hit on a yarn tube (not on a fuzz shell) at normalised device coordinates
+    const yarnHit = (at: Vector2): Intersection | undefined => {
+      const ray = new Raycaster();
+      ray.setFromCamera(at, camera);
+      return ray.intersectObjects(scene.children, true).find((h) => h.object.userData.yarn);
+    };
     const hook = {
       hitPoint() {
-        const mesh = scene.children.find((o) => (o as Mesh).isMesh) as Mesh | undefined;
-        if (!mesh) return null;
         const rect = gl.domElement.getBoundingClientRect();
-        const ray = new Raycaster();
-        const geometry = mesh.geometry;
         const spots: [number, number][] = [];
         for (let i = -9; i <= 9; i++) for (let j = -9; j <= 9; j++) spots.push([i / 10, j / 10]);
         spots.sort((a, b) => Math.hypot(...a) - Math.hypot(...b));
         for (const [nx, ny] of spots) {
-          ray.setFromCamera(new Vector2(nx, ny), camera);
-          const hit = ray.intersectObject(mesh)[0];
-          if (hit?.faceIndex != null && geometry.index)
+          const hit = yarnHit(new Vector2(nx, ny));
+          const geometry = (hit?.object as Mesh | undefined)?.geometry;
+          if (hit?.faceIndex != null && geometry?.index)
             return {
               x: rect.left + ((nx + 1) / 2) * rect.width,
               y: rect.top + ((1 - ny) / 2) * rect.height,
@@ -133,71 +101,44 @@ function E2eHook() {
       cameraDirection() {
         return camera.position.clone().normalize().toArray();
       },
+      /** Shown yarn chunks per level of detail (lod.ts), and how many of them draw fuzz shells. */
+      levels() {
+        const chunks = LEVELS.map(() => 0);
+        let fuzz = 0;
+        scene.traverseVisible((o) => {
+          if (!o.userData.yarn) return;
+          chunks[o.userData.level as number]++;
+          if (o.children.length) fuzz++;
+        });
+        return { chunks, fuzz };
+      },
+      /** Close-up: orbits around the yarn under the canvas centre, `mm` away from it; false when the centre shows no yarn. */
+      closeUp(mm: number) {
+        const hit = yarnHit(new Vector2(0, 0));
+        if (!hit) return false;
+        camera.position.sub(hit.point).setLength(mm).add(hit.point);
+        (camera as PerspectiveCamera).near = mm / 100;
+        camera.updateProjectionMatrix();
+        controls?.target.copy(hit.point);
+        controls?.update();
+        return true;
+      },
     };
     (window as unknown as { __stitchcraft?: typeof hook }).__stitchcraft = hook;
     return () => void delete (window as unknown as { __stitchcraft?: typeof hook }).__stitchcraft;
-  }, [scene, camera, gl]);
+  }, [scene, camera, gl, controls]);
   return null;
 }
 
-function YarnMesh({ geometry, material, yarn, colorOf, silhouette, selected, onSelect, drawCount, centre }: {
-  geometry: BufferGeometry; material: Material; yarn: Yarn; colorOf: Map<number, string>; silhouette: boolean; selected: number | null;
-  onSelect(id: number): void; drawCount: number; centre: Vector3;
-}) {
-  const ply = useMemo(plyTexture, []);
-  const look = MATERIAL_LOOK[material];
-  useEffect(() => {
-    geometry.setDrawRange(0, drawCount);
-  }, [geometry, drawCount]);
-  useEffect(() => {
-    const rgb = vertexColors(yarn, SIDES, colorOf, selected, HIGHLIGHT);
-    const attr = geometry.getAttribute("color") as BufferAttribute | undefined;
-    if (!attr) return void geometry.setAttribute("color", new BufferAttribute(rgb, 3));
-    (attr.array as Float32Array).set(rgb); // reuse the GPU buffer
-    attr.needsUpdate = true;
-  }, [geometry, yarn, colorOf, selected]);
-
-  const pick = (e: ThreeEvent<PointerEvent>) => {
-    if (e.faceIndex == null || !geometry.index) return;
-    e.stopPropagation();
-    const vertex = geometry.index.getX(e.faceIndex * 3);
-    onSelect(geometry.getAttribute("stitch").getX(vertex));
-  };
-
-  return (
-    <mesh geometry={geometry} position={centre.clone().negate()} onPointerDown={pick}>
-      {silhouette ? (
-        <meshBasicMaterial color="black" />
-      ) : (
-        <meshPhysicalMaterial
-          vertexColors
-          roughness={look.roughness}
-          sheen={look.sheen}
-          sheenRoughness={look.sheenRoughness}
-          sheenColor="#d8d8d8"
-          bumpMap={ply}
-          bumpScale={look.bumpScale}
-        />
-      )}
-    </mesh>
-  );
-}
-
 export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer(props, ref) {
-  const { yarn, rowOf, maxRow, colorOf, selected, onSelect, silhouette, view, rounds, material, showFps } = props;
+  const { yarn, rowOf, maxRow, colorOf, selected, onSelect, silhouette, view, rounds, material, fuzz, showFps } = props;
   const canvas = useRef<HTMLCanvasElement>(null);
   useImperativeHandle(ref, () => ({ snapshot: () => canvas.current?.toDataURL("image/png") ?? "" }));
 
-  const geometry = useMemo(() => buildTube(yarn, SIDES), [yarn]);
-  useEffect(() => () => geometry.dispose(), [geometry]);
   const { centre, radius } = useMemo(() => {
-    geometry.computeBoundingBox();
-    const box = geometry.boundingBox!;
-    const c = box.getCenter(new Vector3());
-    return { centre: c, radius: box.getSize(new Vector3()).length() / 2 };
-  }, [geometry]);
-  const points = pointRangeForRows(yarn, rowOf, maxRow);
-  const drawCount = Math.max(points - 1, 0) * SIDES * 6;
+    const box = new Box3().setFromArray(yarn.points).expandByScalar(yarn.radius[0] ?? 0);
+    return { centre: box.getCenter(new Vector3()), radius: box.getSize(new Vector3()).length() / 2 };
+  }, [yarn]);
 
   return (
     <Canvas
@@ -223,15 +164,15 @@ export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer(props, ref
         </>
       )}
       <YarnMesh
-        geometry={geometry}
-        material={material}
         yarn={yarn}
+        material={material}
         colorOf={colorOf}
-        silhouette={silhouette}
         selected={selected}
-        onSelect={onSelect}
-        drawCount={drawCount}
+        silhouette={silhouette}
+        fuzz={fuzz}
+        visiblePoints={pointRangeForRows(yarn, rowOf, maxRow)}
         centre={centre}
+        onSelect={onSelect}
       />
       {!silhouette && (
         <EffectComposer>
