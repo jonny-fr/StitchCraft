@@ -81,7 +81,8 @@ uv run stitchcraft gate --milestone m5   # Stäbchen-Gate (Stück 6 u. a.), docs
 ## MCP-Server
 
 `services/mcp` stellt den Kern als MCP-Server bereit. Tools: `validate_pattern` (Dialekt, Diagnosen
-mit Zeile/Spalte und Meldung in `ui_locale` de|en, Soll/Ist je Reihe), `parse_pattern` (IR als JSON),
+mit Zeile/Spalte und Meldung in `ui_locale` de|en, Soll/Ist je Reihe, geschätzte Häkelzeit
+`time_estimate` nach `data/timing.toml`), `parse_pattern` (IR als JSON),
 `render_preview` (GLB als Resource `stitchcraft://previews/{key}/model.glb`, Statistik und, wenn der
 Snapshot-Dienst läuft, ein PNG; sonst nur mit Hinweis) und `list_stitches`. Vorschauen liegen im selben
 Cache wie bei der API. Einbinden in Claude Code, Snapshot-Profil, Beispielsession: [`docs/mcp.md`](docs/mcp.md).
@@ -113,7 +114,7 @@ services/api/    FastAPI (validate, parse, previews mit Datei-Cache)
 services/mcp/    MCP-Server (FastMCP/MCPServer; stdio + Streamable HTTP)
 services/snapshot/  Playwright-Renderer: PNG aus der Viewer-Seite (`/?snapshot=<key>`), Compose-Profil `snapshot`
 web/             React + react-three-fiber Viewer
-data/            Dialekt-Vokabular, Maschenbibliothek, Garnvorlagen (versioniert)
+data/            Dialekt-Vokabular, Maschenbibliothek, Garnvorlagen, Häkelzeiten (versioniert)
 tests/reference/ Referenzstücke für die Gates M1 und M5 (Fotos/Masken ergänzen, siehe README dort)
 ```
 

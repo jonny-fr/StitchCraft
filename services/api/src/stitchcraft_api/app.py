@@ -20,7 +20,7 @@ from stitchcraft_core.pipeline import cache_key, preview
 from stitchcraft_core.serialize import parse_dict, validation_dict
 from stitchcraft_core.validate import validate
 
-from stitchcraft_api.schemas import PatternIn, PreviewIn
+from stitchcraft_api.schemas import PatternIn, PreviewIn, ValidateIn, ValidationOut
 
 FILES = {"yarn.bin": "application/octet-stream", "model.glb": "model/gltf-binary"}
 
@@ -95,9 +95,11 @@ def create_app(cache_dir: Path | None = None, max_jobs: int | None = None) -> Fa
             raise HTTPException(422, f"unknown dialect {dialect!r}")
         return {"dialect": dialect, "words": vocabulary(dialect)}
 
-    @app.post("/api/v1/validate")
-    def validate_pattern(body: PatternIn) -> dict:
-        return validation_dict(validate(body.text, dialect=body.dialect))
+    @app.post("/api/v1/validate", response_model=ValidationOut)
+    def validate_pattern(body: ValidateIn) -> dict:
+        params = Params(**body.params.model_dump())
+        result = validate(body.text, body.dialect, params, body.pace, body.stitches_per_minute)
+        return validation_dict(result)
 
     @app.post("/api/v1/parse")
     def parse_pattern(body: PatternIn) -> dict:

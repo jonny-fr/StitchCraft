@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 from stitchcraft_core.notation.dialect import available_dialects
+from stitchcraft_core.timing import Pace
 
 
 class PatternIn(BaseModel):
@@ -33,3 +34,58 @@ class ParamsIn(BaseModel):
 
 class PreviewIn(PatternIn):
     params: ParamsIn = Field(default_factory=ParamsIn)
+
+
+class ValidateIn(PreviewIn):
+    """For validation, params (yarn_mm, material), pace and stitches_per_minute only shape the
+    time estimate."""
+
+    pace: Pace = "geuebt"
+    stitches_per_minute: float | None = Field(
+        None, gt=0, le=200, description="Own pace in sc per minute; replaces pace and yarn factor"
+    )
+
+
+class SpanOut(BaseModel):
+    start: int
+    end: int
+    line: int
+    col: int
+
+
+class DiagnosticOut(BaseModel):
+    code: str
+    severity: Literal["error", "warning", "info"]
+    span: SpanOut | None
+    params: dict[str, Any]
+
+
+class RowOut(BaseModel):
+    number: int
+    kind: str
+    actual: int
+    expected: int | None
+    line: int | None
+
+
+class RowTimeOut(BaseModel):
+    number: int
+    kind: str
+    seconds: float
+
+
+class TimeEstimateOut(BaseModel):
+    """Estimated crochet time without stuffing, sewing together and weaving in ends."""
+
+    seconds_low: int
+    seconds_high: int
+    per_row: list[RowTimeOut]
+
+
+class ValidationOut(BaseModel):
+    dialect: str
+    ok: bool
+    total_stitches: int
+    diagnostics: list[DiagnosticOut]
+    rows: list[RowOut]
+    time_estimate: TimeEstimateOut | None

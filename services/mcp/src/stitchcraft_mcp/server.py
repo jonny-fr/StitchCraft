@@ -15,7 +15,7 @@ from mcp.server.mcpserver import Context, MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp_types import CallToolResult, ImageContent, TextContent
 from pydantic import Field, ValidationError
-from stitchcraft_api.schemas import ParamsIn, PatternIn
+from stitchcraft_api.schemas import ParamsIn, PatternIn, ValidateIn
 from stitchcraft_core.data import load_toml
 from stitchcraft_core.export import write_preview
 from stitchcraft_core.messages import LOCALES, diagnostic_message, message
@@ -23,6 +23,7 @@ from stitchcraft_core.notation.dialect import available_dialects, vocabulary
 from stitchcraft_core.params import Params
 from stitchcraft_core.pipeline import PreviewError, cache_key, preview
 from stitchcraft_core.serialize import parse_dict, validation_dict
+from stitchcraft_core.timing import Pace
 from stitchcraft_core.validate import validate
 
 from stitchcraft_mcp import snapshot
@@ -37,6 +38,15 @@ FILES = {"model.glb": "model/gltf-binary", "shape.json": "application/json"}
 Text = Annotated[str, Field(description="Crochet pattern, one round/row per line")]
 Dialect = Annotated[str, Field(description="de, en-US, en-UK or auto (detect)")]
 UiLocale = Annotated[str, Field(description="Language of messages: de or en")]
+ParamsArg = Annotated[
+    dict[str, Any] | None,
+    Field(
+        description=(
+            "Optional: yarn_mm, hook_mm, gauge_stitches, gauge_rows, fill (0-1), "
+            "handedness, right_side_out, material (cotton/acrylic/mohair), color, seed"
+        )
+    ),
+]
 
 
 def _locale(ui_locale: str) -> str:
@@ -60,6 +70,18 @@ def _params(raw: dict[str, Any] | None) -> ParamsIn:
         return ParamsIn(**(raw or {}))
     except ValidationError as exc:
         raise ToolError(f"invalid params: {_invalid(exc)}") from exc
+
+
+def _validate_in(
+    text: str, dialect: str, params: dict[str, Any] | None, pace: str, spm: float | None
+) -> ValidateIn:
+    pattern, params_in = _pattern(text, dialect), _params(params)
+    try:
+        return ValidateIn(
+            **pattern.model_dump(), params=params_in, pace=pace, stitches_per_minute=spm
+        )
+    except ValidationError as exc:
+        raise ToolError(_invalid(exc)) from exc
 
 
 def _invalid(exc: ValidationError) -> str:
@@ -90,13 +112,26 @@ def create_server(cache_dir: Path | None = None) -> MCPServer:
 
     @mcp.tool()
     def validate_pattern(
-        text: Text, dialect: Dialect = "auto", ui_locale: UiLocale = "de"
+        text: Text,
+        dialect: Dialect = "auto",
+        ui_locale: UiLocale = "de",
+        params: ParamsArg = None,
+        pace: Annotated[
+            Pace, Field(description="Pace for the time estimate: anfaenger, geuebt, schnell")
+        ] = "geuebt",
+        stitches_per_minute: Annotated[
+            float | None,
+            Field(description="Optional own pace in sc per minute; replaces pace and yarn factor"),
+        ] = None,
     ) -> dict[str, Any]:
-        """Check a pattern: detected dialect, diagnostics with line/column and message, and
-        expected vs. counted stitches per round/row."""
+        """Check a pattern: detected dialect, diagnostics with line/column and message,
+        expected vs. counted stitches per round/row, and the estimated crochet time
+        (time_estimate: seconds_low, seconds_high, per_row; without stuffing, sewing together
+        and weaving in ends). params (yarn_mm, material) and pace only shape the estimate."""
         locale = _locale(ui_locale)
-        body = _pattern(text, dialect)
-        result = validate(body.text, dialect=body.dialect)
+        body = _validate_in(text, dialect, params, pace, stitches_per_minute)
+        core_params = Params(**body.params.model_dump())
+        result = validate(body.text, body.dialect, core_params, body.pace, body.stitches_per_minute)
         out = validation_dict(result)
         out["diagnostics"] = _localised(out["diagnostics"], locale)
         out["rows"] = [
@@ -133,15 +168,7 @@ def create_server(cache_dir: Path | None = None) -> MCPServer:
         text: Text,
         ctx: Context,
         dialect: Dialect = "auto",
-        params: Annotated[
-            dict[str, Any] | None,
-            Field(
-                description=(
-                    "Optional: yarn_mm, hook_mm, gauge_stitches, gauge_rows, fill (0-1), "
-                    "handedness, right_side_out, material (cotton/acrylic/mohair), color, seed"
-                )
-            ),
-        ] = None,
+        params: ParamsArg = None,
         view: Annotated[
             Literal["front", "side", "top", "iso"], Field(description="Camera for the PNG")
         ] = "front",

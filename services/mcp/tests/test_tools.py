@@ -1,4 +1,6 @@
 import pytest
+from fastapi.testclient import TestClient
+from stitchcraft_api.app import create_app
 
 from .samples import TINY, corpus
 
@@ -90,11 +92,49 @@ async def test_validate_syntax_error_line_in_message(client):
         {"text": TINY, "dialect": "klingon"},
         {"text": TINY, "ui_locale": "fr"},
         {"text": "x" * 200_001},
+        {"text": TINY, "pace": "turbo"},
+        {"text": TINY, "stitches_per_minute": 0},
+        {"text": TINY, "params": {"yarn_mm": 0}},
+        {"text": TINY, "params": {"needle": 3}},
     ],
 )
 async def test_validate_rejects_bad_input(client, arguments):
     r = await client.call_tool("validate_pattern", arguments)
     assert r.is_error
+
+
+SPHERE = corpus("de", "01-kugel.txt")
+
+
+@pytest.mark.parametrize(
+    "timing",
+    [
+        {},
+        {"pace": "anfaenger"},
+        {"pace": "schnell", "params": {"yarn_mm": 5.0, "material": "mohair"}},
+        {"stitches_per_minute": 15},
+    ],
+)
+async def test_validate_time_estimate_matches_the_api(client, tmp_path, timing):
+    """H2: the MCP tool and POST /api/v1/validate give the same estimate for the same input."""
+    api = TestClient(create_app(cache_dir=tmp_path))
+    expected = api.post("/api/v1/validate", json={"text": SPHERE, "dialect": "de", **timing})
+    out = await call(client, "validate_pattern", text=SPHERE, dialect="de", **timing)
+    est = out.structured_content["time_estimate"]
+    assert est == expected.json()["time_estimate"]
+    rows = out.structured_content["rows"]
+    assert est["seconds_low"] < est["seconds_high"] and len(est["per_row"]) == len(rows)
+
+
+async def test_validate_time_estimate_follows_the_pace(client):
+    def high(r):
+        return r.structured_content["time_estimate"]["seconds_high"]
+
+    normal = await call(client, "validate_pattern", text=SPHERE)
+    slow = await call(client, "validate_pattern", text=SPHERE, pace="anfaenger")
+    assert high(slow) > high(normal)
+    empty = await call(client, "validate_pattern", text="")
+    assert empty.structured_content["time_estimate"] is None
 
 
 async def test_parse_returns_ir_and_diagnostics(client):

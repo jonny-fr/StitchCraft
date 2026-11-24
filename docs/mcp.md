@@ -49,10 +49,19 @@ Claude Desktop: denselben `command`/`args`-Eintrag unter `mcpServers` in
 
 | Werkzeug | Eingabe | Ausgabe |
 |---|---|---|
-| `validate_pattern` | `text`, `dialect` (`de`, `en-US`, `en-UK`, `auto`), `ui_locale` (`de`, `en`) | erkannter Dialekt, `ok`, Diagnosen mit Zeile/Spalte und Meldung, Soll/Ist je Runde/Reihe |
+| `validate_pattern` | `text`, `dialect` (`de`, `en-US`, `en-UK`, `auto`), `ui_locale` (`de`, `en`), `params?` (`yarn_mm`, `material`, …), `pace?` (`anfaenger`, `geuebt` (Standard), `schnell`), `stitches_per_minute?` | erkannter Dialekt, `ok`, Diagnosen mit Zeile/Spalte und Meldung, Soll/Ist je Runde/Reihe, `time_estimate` (Häkelzeit, siehe unten) |
 | `parse_pattern` | `text`, `dialect` | kanonische Zwischendarstellung (IR) als JSON |
 | `render_preview` | `text`, `dialect`, `params?` (Garn, Nadel, Maschenprobe, Füllung, `material`, `color`, …), `view?` (`front`, `side`, `top`, `iso`), `ui_locale` | strukturierte Daten: `id`, `cached`, `resources`, `stats` (Maschen, Maße in cm, Garnlänge), `diagnostics`, `notes`; dazu ein PNG als Bildinhalt (`image/png`), wenn der Snapshot-Dienst läuft |
 | `list_stitches` | `dialect` | Maschenbibliothek, Makros und Vokabular des Dialekts |
+
+`time_estimate` ist die geschätzte Häkelzeit: `{seconds_low, seconds_high, per_row: [{number, kind,
+seconds}]}`. Sie ist eine Summe über die Maschen mit den Werten aus `data/timing.toml` (Sekunden je
+Maschentyp, Zuschläge für Zu-/Abnahmen, je Runde/Reihe, je Farbwechsel und den Magic Ring), mal Tempo
+und einem kleinen Faktor für Garnstärke und Material aus `params`. Die Spanne ist ±25 %, `per_row`
+enthält den Mittelwert je Runde/Reihe. `stitches_per_minute` (feste Maschen pro Minute, selbst
+gemessen) ersetzt Tempo und Garnfaktor; andere Maschen behalten ihr Verhältnis zur festen Masche.
+Ausstopfen, Zusammennähen und Fäden vernähen sind nicht enthalten. Leere oder zu große Anleitungen
+liefern `null`. Die API (`POST /api/v1/validate`) nimmt dieselben Felder und liefert dieselbe Zahl.
 
 Ergebnisse von `render_preview` liegen im Cache und werden nach Inhalt wiedererkannt: Ein zweiter Aufruf
 mit derselben Anleitung rechnet nicht neu. Die Garnfarbe gehört bewusst nicht zum Schlüssel, ändert aber das PNG.

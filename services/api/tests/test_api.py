@@ -190,6 +190,52 @@ def test_validate_rows_carry_their_source_line(client):
     assert [row["line"] for row in r.json()["rows"]] == [2, 3, 3]
 
 
+CUP = "Rd. 1: 6 fM in MR (6)\nRd. 2: 6x zun (12)\nRd. 3-6: 12 fM (12)"
+
+
+def test_validate_carries_the_time_estimate_with_the_default_pace(client):
+    body = client.post("/api/v1/validate", json={"text": CUP, "dialect": "de"}).json()
+    est = body["time_estimate"]
+    assert [r["number"] for r in est["per_row"]] == [1, 2, 3, 4, 5, 6]
+    mid = sum(r["seconds"] for r in est["per_row"])
+    assert est["seconds_low"] < mid < est["seconds_high"]
+    default = client.post("/api/v1/validate", json={"text": CUP, "pace": "geuebt"}).json()
+    assert default["time_estimate"] == est
+
+
+def test_validate_time_follows_pace_yarn_and_own_pace(client):
+    def seconds(**extra):
+        r = client.post("/api/v1/validate", json={"text": CUP, "dialect": "de", **extra})
+        assert r.status_code == 200
+        return sum(row["seconds"] for row in r.json()["time_estimate"]["per_row"])
+
+    assert seconds(pace="anfaenger") > seconds() > seconds(pace="schnell")
+    assert seconds(params={"material": "mohair"}) > seconds()
+    assert seconds(params={"yarn_mm": 6.0}) < seconds()
+    assert seconds(stitches_per_minute=12) == 2 * seconds(stitches_per_minute=24)
+
+
+@pytest.mark.parametrize("extra", [{"pace": "turbo"}, {"stitches_per_minute": 0}])
+def test_validate_rejects_bad_pace(client, extra):
+    assert client.post("/api/v1/validate", json={"text": CUP, **extra}).status_code == 422
+
+
+def test_validate_empty_pattern_has_no_time_estimate(client):
+    assert client.post("/api/v1/validate", json={"text": ""}).json()["time_estimate"] is None
+
+
+def test_openapi_documents_the_time_estimate(client):
+    schema = client.get("/openapi.json").json()
+    comps = schema["components"]["schemas"]
+    post = schema["paths"]["/api/v1/validate"]["post"]
+    ok = post["responses"]["200"]["content"]["application/json"]["schema"]
+    assert ok == {"$ref": "#/components/schemas/ValidationOut"}
+    assert set(comps["TimeEstimateOut"]["properties"]) == {"seconds_low", "seconds_high", "per_row"}
+    assert "time_estimate" in comps["ValidationOut"]["properties"]
+    assert set(comps["ValidateIn"]["properties"]) >= {"params", "pace", "stitches_per_minute"}
+    assert comps["ValidateIn"]["properties"]["pace"]["enum"] == ["anfaenger", "geuebt", "schnell"]
+
+
 def test_concurrent_jobs_are_bounded(tmp_path, monkeypatch):
     import threading
 
